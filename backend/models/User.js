@@ -24,9 +24,12 @@ const kycSchema = new mongoose.Schema(
   {
     status:       { type: String, enum: KYC_STATUS, default: 'not_submitted' },
     documentType: { type: String, trim: true },      // e.g. 'aadhaar', 'passport'
+    idType:       { type: String, trim: true },      // checklist field
+    idNumber:     { type: String, trim: true },      // checklist field
     documentUrl:  { type: String, trim: true },      // stored file path / cloud URL
     submittedAt:  { type: Date },
     reviewedAt:   { type: Date },
+    verifiedAt:   { type: Date },                    // checklist field
     reviewNote:   { type: String, trim: true },
   },
   { _id: false }
@@ -73,6 +76,27 @@ const userSchema = new mongoose.Schema(
     },
 
     // ── Profile ───────────────────────────────────────────────────────────────
+    walletAddress: {
+      type: String,
+      unique: true,
+      sparse: true,
+      lowercase: true,
+    },
+    
+    bankAccount: {
+      accountNumber: String,
+      ifscCode: String,
+      accountHolder: String,
+      verified: { type: Boolean, default: false }
+    },
+
+    reputationScore: {
+      type: Number,
+      default: 100,
+      min: 0,
+      max: 100
+    },
+
     avatar: {
       type: String,
       trim: true,
@@ -182,6 +206,7 @@ const userSchema = new mongoose.Schema(
 // ─── Indexes ──────────────────────────────────────────────────────────────────
 
 userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ walletAddress: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ accountStatus: 1 });
 userSchema.index({ 'kyc.status': 1 });
@@ -200,30 +225,23 @@ userSchema.virtual('displayName').get(function () {
 // ─── Pre-save Hooks ───────────────────────────────────────────────────────────
 
 /** Hash password before saving if it was modified */
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
 
-  try {
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
+  const salt = await bcrypt.genSalt(12);
+  this.password = await bcrypt.hash(this.password, salt);
 
-    // Track when password was changed (skip on first save)
-    if (!this.isNew) {
-      this.passwordChangedAt = new Date(Date.now() - 1000); // -1s buffer for JWT iat
-    }
-
-    next();
-  } catch (err) {
-    next(err);
+  // Track when password was changed (skip on first save)
+  if (!this.isNew) {
+    this.passwordChangedAt = new Date(Date.now() - 1000); // -1s buffer for JWT iat
   }
 });
 
 /** Normalise email to lowercase before saving */
-userSchema.pre('save', function (next) {
+userSchema.pre('save', function () {
   if (this.isModified('email')) {
     this.email = this.email.toLowerCase().trim();
   }
-  next();
 });
 
 // ─── Instance Methods ─────────────────────────────────────────────────────────
