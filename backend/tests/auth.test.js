@@ -158,3 +158,49 @@ describe('GET /api/auth/me', () => {
     expect(res.statusCode).toBe(401);
   });
 });
+
+// ─── POST /api/auth/wallet ────────────────────────────────────────────────────
+
+describe('POST /api/auth/wallet', () => {
+  it('should link a valid Stellar wallet address', async () => {
+    const validAddress = 'GA5W247FEJSIBI2LNITA4DIP3ESP3BYCXU6IX4K67HK26LODH6H7G2G7';
+    const res = await request(app)
+      .post('/api/auth/wallet')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ walletAddress: validAddress });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.user.walletAddress).toBe(validAddress.toLowerCase());
+  });
+
+  it('should reject invalid Stellar wallet address format', async () => {
+    const res = await request(app)
+      .post('/api/auth/wallet')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ walletAddress: 'GA5W247F_INVALID_FORMAT' });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBe('VALIDATION_ERROR');
+  });
+
+  it('should reject linking a wallet address already in use by another user', async () => {
+    const sharedAddress = 'GB2SIBIDLNITA4DIP3ESP3BYCXU6IX4K67HK26LODH6H7G2G7XXXXXXX';
+
+    // Link buyer
+    await request(app)
+      .post('/api/auth/wallet')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ walletAddress: sharedAddress });
+
+    // Attempt to link seller to the same wallet address
+    const res = await request(app)
+      .post('/api/auth/wallet')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ walletAddress: sharedAddress });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toContain('already linked');
+  });
+});

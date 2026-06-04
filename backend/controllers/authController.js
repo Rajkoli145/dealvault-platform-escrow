@@ -162,3 +162,32 @@ exports.logout = (req, res) => {
     message: 'Logged out successfully.',
   });
 };
+
+/**
+ * POST /api/auth/wallet
+ */
+exports.linkWallet = async (req, res, next) => {
+  try {
+    const { walletAddress } = req.body;
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return next(new AppError('User not found.', 404));
+    }
+
+    user.walletAddress = walletAddress;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        user: user.toSafeObject(),
+      },
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      return next(new AppError('This wallet address is already linked to another account.', 400));
+    }
+    next(err);
+  }
+};

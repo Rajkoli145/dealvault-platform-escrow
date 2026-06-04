@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { WalletConnectButton } from './components/WalletConnectButton';
+import { connectStellarWallet, disconnectStellarWallet } from './utils/stellarWallet';
 
 import logo from './images/DbLogo.png';
 import imgFreighter from './images/freighter.png';
@@ -52,7 +54,14 @@ function useInView(threshold = 0.15) {
   return { ref, inView };
 }
 
-function NavBar() {
+interface NavBarProps {
+  connectedAddress: string | null;
+  isConnecting: boolean;
+  onConnect: () => void;
+  onDisconnect: () => void;
+}
+
+function NavBar({ connectedAddress, isConnecting, onConnect, onDisconnect }: NavBarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -82,15 +91,17 @@ function NavBar() {
         </div>
 
         {/* RIGHT — Buttons */}
-        <div className="flex items-center justify-end gap-3">
-          <a href="https://github.com" className="hidden md:flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium whitespace-nowrap">
+        <div className="flex items-center justify-end gap-3 font-medium">
+          <a href="https://github.com" className="hidden md:flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap">
             <Github className="w-4 h-4" />
             GitHub
           </a>
-          <button className="relative overflow-hidden group bg-black hover:bg-gray-800 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors whitespace-nowrap">
-            <span className="relative z-10">Get started</span>
-            <div className="absolute inset-0 w-1/2 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent animate-shimmer" />
-          </button>
+          <WalletConnectButton
+            connectedAddress={connectedAddress}
+            isConnecting={isConnecting}
+            onConnect={onConnect}
+            onDisconnect={onDisconnect}
+          />
           <button className="md:hidden text-gray-600 hover:text-gray-900" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -106,15 +117,23 @@ function NavBar() {
               {item}
             </a>
           ))}
-          <div className="flex gap-3 mt-4">
-            <button className="flex-1 text-sm border border-gray-200 rounded-lg py-2 text-gray-700 font-medium">GitHub</button>
-            <button className="flex-1 text-sm bg-black text-white rounded-lg py-2 font-medium">Get started</button>
+          <div className="flex gap-3 mt-4 flex-col">
+            <a href="https://github.com" className="text-center text-sm border border-gray-200 rounded-lg py-2 text-gray-700 font-medium">GitHub</a>
+            <div className="flex justify-center">
+              <WalletConnectButton
+                connectedAddress={connectedAddress}
+                isConnecting={isConnecting}
+                onConnect={onConnect}
+                onDisconnect={onDisconnect}
+              />
+            </div>
           </div>
         </div>
       )}
     </nav>
   );
 }
+
 
 function Hero() {
   const [copied, setCopied] = useState(false);
@@ -965,11 +984,307 @@ function Testimonials() {
   );
 }
 
+function MvpSimulationDashboard({
+  connectedAddress,
+}: {
+  connectedAddress: string | null;
+}) {
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'buyer' | 'seller'>('buyer');
+  const [user, setUser] = useState<any>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [apiStatus, setApiStatus] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const savedToken = localStorage.getItem('token');
+    const savedUser = localStorage.getItem('user');
+    if (savedToken && savedUser) {
+      setToken(savedToken);
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setApiStatus(null);
+    setApiError(null);
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, role }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setToken(data.token);
+        setUser(data.data.user);
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.data.user));
+        setApiStatus('Registered and logged in successfully!');
+      } else {
+        setApiError(data.message || 'Registration failed');
+      }
+    } catch (err: any) {
+      setApiError('Server connection error. Is the backend running?');
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setApiStatus(null);
+    setApiError(null);
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setToken(data.token);
+        setUser(data.data.user);
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.data.user));
+        setApiStatus('Logged in successfully!');
+      } else {
+        setApiError(data.message || 'Login failed');
+      }
+    } catch (err: any) {
+      setApiError('Server connection error. Is the backend running?');
+    }
+  };
+
+  const handleLogout = () => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setApiStatus('Logged out.');
+  };
+
+  const handleLinkWallet = async () => {
+    if (!connectedAddress) {
+      setApiError('Please connect your Stellar wallet first using the top-right button.');
+      return;
+    }
+    if (!token) {
+      setApiError('Please register or log in first.');
+      return;
+    }
+    setApiStatus(null);
+    setApiError(null);
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/wallet', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ walletAddress: connectedAddress }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUser(data.data.user);
+        localStorage.setItem('user', JSON.stringify(data.data.user));
+        setApiStatus('Stellar wallet successfully linked to your database profile!');
+      } else {
+        setApiError(data.message || 'Wallet linking failed');
+      }
+    } catch (err) {
+      setApiError('Server connection error while linking wallet.');
+    }
+  };
+
+  return (
+    <section className="py-12 px-6 bg-gray-50 border-y border-gray-200">
+      <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden">
+        <div className="bg-black text-white px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-amber-400" />
+            <h3 className="font-bold">Stellar Wallet MVP Simulation Dashboard</h3>
+          </div>
+          <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded-full font-mono">MVP Interactive Testing</span>
+        </div>
+
+        <div className="p-6 grid md:grid-cols-2 gap-8">
+          {/* Left Panel: Auth Form */}
+          <div className="border-r border-gray-100 pr-0 md:pr-8">
+            {user ? (
+              <div className="space-y-4">
+                <p className="text-sm font-semibold text-gray-700">Active Session Info:</p>
+                <div className="bg-gray-50 p-4 rounded-xl space-y-2 text-xs font-mono">
+                  <div><span className="text-gray-400">Name:</span> {user.name}</div>
+                  <div><span className="text-gray-400">Email:</span> {user.email}</div>
+                  <div><span className="text-gray-400">Role:</span> <span className="uppercase font-bold text-amber-700">{user.role}</span></div>
+                  <div>
+                    <span className="text-gray-400">DB Wallet Address:</span>{' '}
+                    <span className="text-green-700 font-bold truncate block">
+                      {user.walletAddress || 'None Linked'}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-center text-xs text-red-600 border border-red-200 hover:bg-red-50 rounded-lg py-2 transition-colors font-medium"
+                >
+                  Log Out Session
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-3">
+                <p className="text-sm font-bold text-gray-800">Login or Register Mock Account</p>
+                
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">Name (for registration)</label>
+                  <input
+                    type="text"
+                    placeholder="Jane Doe"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full text-xs border border-gray-200 rounded-lg p-2 focus:outline-none focus:border-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">Email</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="jane@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full text-xs border border-gray-200 rounded-lg p-2 focus:outline-none focus:border-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">Password</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full text-xs border border-gray-200 rounded-lg p-2 focus:outline-none focus:border-black"
+                  />
+                </div>
+
+                <div className="flex gap-4 items-center">
+                  <span className="text-[10px] uppercase font-bold text-gray-400">Role:</span>
+                  <label className="flex items-center gap-1 text-xs">
+                    <input
+                      type="radio"
+                      name="role"
+                      checked={role === 'buyer'}
+                      onChange={() => setRole('buyer')}
+                    />
+                    Buyer
+                  </label>
+                  <label className="flex items-center gap-1 text-xs">
+                    <input
+                      type="radio"
+                      name="role"
+                      checked={role === 'seller'}
+                      onChange={() => setRole('seller')}
+                    />
+                    Seller
+                  </label>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 text-xs bg-black text-white hover:bg-gray-800 rounded-lg py-2 font-medium transition-colors"
+                  >
+                    Log In
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRegister}
+                    className="flex-1 text-xs border border-black text-black hover:bg-gray-50 rounded-lg py-2 font-medium transition-colors"
+                  >
+                    Register
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+
+          {/* Right Panel: Wallet Link Action */}
+          <div className="flex flex-col justify-center space-y-4">
+            <p className="text-sm font-bold text-gray-800">Database Wallet Association</p>
+            
+            <div className="bg-gray-50 p-4 rounded-xl space-y-2 text-xs font-mono">
+              <div>
+                <span className="text-gray-400">Selected Extension Wallet:</span>{' '}
+                <span className="text-blue-700 font-bold block truncate">
+                  {connectedAddress || 'None Connected'}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleLinkWallet}
+              disabled={!connectedAddress || !token}
+              className="w-full text-xs bg-amber-500 hover:bg-amber-600 disabled:bg-gray-200 disabled:text-gray-400 text-black font-semibold rounded-lg py-2.5 transition-colors shadow-sm"
+            >
+              Sync & Save Wallet to Profile
+            </button>
+
+            {apiStatus && (
+              <div className="text-xs bg-green-50 text-green-700 border border-green-200 p-3 rounded-lg flex items-center gap-2">
+                <CheckCircle className="w-4.5 h-4.5 flex-shrink-0" />
+                <span>{apiStatus}</span>
+              </div>
+            )}
+
+            {apiError && (
+              <div className="text-xs bg-red-50 text-red-700 border border-red-200 p-3 rounded-lg flex items-center gap-2">
+                <AlertCircle className="w-4.5 h-4.5 flex-shrink-0" />
+                <span>{apiError}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function App() {
+  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  const handleConnect = async () => {
+    setIsConnecting(true);
+    try {
+      const address = await connectStellarWallet();
+      setConnectedAddress(address);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    await disconnectStellarWallet();
+    setConnectedAddress(null);
+  };
+
   return (
     <div className="min-h-screen bg-white text-gray-900">
-      <NavBar />
+      <NavBar
+        connectedAddress={connectedAddress}
+        isConnecting={isConnecting}
+        onConnect={handleConnect}
+        onDisconnect={handleDisconnect}
+      />
       <Hero />
+      <MvpSimulationDashboard connectedAddress={connectedAddress} />
       <Stats />
       <CompatibleStack />
       <Testimonials />
@@ -983,3 +1298,4 @@ export default function App() {
     </div>
   );
 }
+

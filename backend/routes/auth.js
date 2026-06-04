@@ -3,7 +3,7 @@ const router = express.Router();
 
 const authController = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
-const { validateRegister, validateLogin } = require('../validators');
+const { validateRegister, validateLogin, validateLinkWallet } = require('../validators');
 
 // ─── Public Routes ─────────────────────────────────────────────────────────────
 router.post('/register', ...validateRegister, authController.register);
@@ -15,5 +15,6 @@ router.use(protect); // All routes below require authentication
 
 router.get('/me', authController.getMe);
 router.patch('/change-password', authController.changePassword);
+router.post('/wallet', ...validateLinkWallet, authController.linkWallet);
 
 module.exports = router;

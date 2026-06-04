@@ -6,7 +6,7 @@ const User = require('../models/User');
 const Deal = require('../models/Deal');
 
 let mongoServer;
-let buyerToken, sellerToken, adminToken;
+let buyerToken, sellerToken;
 let buyerId, sellerId;
 
 const futureDate = () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -241,5 +241,51 @@ describe('PATCH /api/deals/:id/status', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.body.error).toBe('VALIDATION_ERROR');
+  });
+
+  it('should reject transition to FUNDED if either buyer or seller lacks a linked wallet address', async () => {
+    // 1. Seller accepts the deal first
+    await request(app)
+      .patch(`/api/deals/${dealId}/status`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ status: 'ACCEPTED' });
+
+    // 2. Buyer tries to transition to FUNDED (should fail because neither has linked wallets)
+    const failRes = await request(app)
+      .patch(`/api/deals/${dealId}/status`)
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ status: 'FUNDED' });
+
+    expect(failRes.statusCode).toBe(400);
+    expect(failRes.body.message).toContain('wallet address before this action');
+  });
+
+  it('should allow transition to FUNDED if both buyer and seller have linked wallet addresses', async () => {
+    // 1. Link buyer wallet
+    await request(app)
+      .post('/api/auth/wallet')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ walletAddress: 'GA5W247FEJSIBI2LNITA4DIP3ESP3BYCXU6IX4K67HK26LODH6H7G2G7' });
+
+    // 2. Link seller wallet
+    await request(app)
+      .post('/api/auth/wallet')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ walletAddress: 'GB2SIBIDLNITA4DIP3ESP3BYCXU6IX4K67HK26LODH6H7G2G7XXXXXXX' });
+
+    // 3. Seller accepts the deal
+    await request(app)
+      .patch(`/api/deals/${dealId}/status`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ status: 'ACCEPTED' });
+
+    // 4. Buyer transitions to FUNDED (should succeed now)
+    const successRes = await request(app)
+      .patch(`/api/deals/${dealId}/status`)
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ status: 'FUNDED' });
+
+    expect(successRes.statusCode).toBe(200);
+    expect(successRes.body.data.deal.status).toBe('FUNDED');
   });
 });
