@@ -4,30 +4,26 @@ import {
 } from '@creit.tech/stellar-wallets-kit';
 import { defaultModules } from '@creit.tech/stellar-wallets-kit/modules/utils';
 
-export const kit = new StellarWalletsKit({
-  network: Networks.TESTNET,
-  modules: defaultModules(),
-});
+let isInitialized = false;
+
+const initKit = () => {
+  if (typeof window !== 'undefined' && !isInitialized) {
+    StellarWalletsKit.init({
+      network: Networks.TESTNET,
+      modules: defaultModules(),
+    });
+    isInitialized = true;
+  }
+};
 
 /**
  * Open the wallet connection modal, let the user select a wallet,
  * retrieve their public Stellar address, and return it.
  */
-export const connectStellarWallet = (): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    kit.openModal({
-      onWalletSelected: async (option) => {
-        try {
-          kit.setWallet(option.id);
-          const { address } = await kit.getAddress();
-          resolve(address);
-        } catch (err) {
-          console.error('Failed to get wallet address:', err);
-          reject(err);
-        }
-      },
-    });
-  });
+export const connectStellarWallet = async (): Promise<string> => {
+  initKit();
+  const { address } = await StellarWalletsKit.authModal();
+  return address;
 };
 
 /**
@@ -35,8 +31,8 @@ export const connectStellarWallet = (): Promise<string> => {
  */
 export const disconnectStellarWallet = async () => {
   try {
-    // Clear selected wallet if supported
-    // The kit itself is stateless once disconnected, so we just clear our frontend state
+    initKit();
+    await StellarWalletsKit.disconnect();
   } catch (err) {
     console.error('Failed to disconnect wallet:', err);
   }
