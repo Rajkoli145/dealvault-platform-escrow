@@ -1,145 +1,133 @@
-# DealVault — Trustless Escrow Platform
+<div align="center">
+  <img src="frontend/src/images/DbLogo.png" alt="DealVault Logo" width="120" />
+  <br />
+  <br />
+  
+  <h1>DealVault</h1>
+  <p><b>The Open Escrow Standard for Stellar.</b></p>
+  
+  <p>
+    Fund bounties in USDC, contributors get paid automatically by Soroban smart contracts.
+  </p>
 
-> **Secure, blockchain-backed escrow for digital service deals.** Buyers lock funds on-chain; sellers get paid only when work is approved.
+  <p>
+    <a href="https://github.com/your-org/dealvault-platform-escrow/actions"><img src="https://img.shields.io/github/actions/workflow/status/your-org/dealvault-platform-escrow/test.yml?branch=main&label=Build&style=flat-square&color=2ea44f" alt="Build Status" /></a>
+    <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License: MIT" /></a>
+    <a href="https://discord.gg/yourdiscord"><img src="https://img.shields.io/discord/1234567890?color=5865F2&label=Discord&logo=discord&logoColor=white&style=flat-square" alt="Discord" /></a>
+  </p>
+</div>
 
-[![CI](https://github.com/your-org/dealvault-platform-escrow/actions/workflows/test.yml/badge.svg)](https://github.com/your-org/dealvault-platform-escrow/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+<br />
 
----
+## 🌟 Why DealVault?
 
-## ✨ Features
+Freelancers and open-source contributors shouldn't have to trust clients to pay net-30. With DealVault, project owners lock **USDC** directly into a **Soroban Smart Contract** on the Stellar network before work begins. 
 
-| Feature | Status |
-|---|---|
-| JWT Authentication (register / login / change password) | ✅ |
-| Full Deal Lifecycle (10-state FSM) | ✅ |
-| Role-based access control (buyer / seller / admin) | ✅ |
-| Input validation & sanitization | ✅ |
-| Rate limiting & security headers (Helmet) | ✅ |
-| File delivery upload (multer) | ✅ |
-| Dispute raising by buyer | ✅ |
-| On-chain Solana escrow program (Rust) | ✅ |
-| Docker / Docker Compose full-stack | ✅ |
-| GitHub Actions CI pipeline | ✅ |
-| Integration test suite (Jest + supertest) | ✅ |
-| API documentation | ✅ |
-| Architecture & deployment guides | ✅ |
+Once the work is approved, the funds are instantly released. **Zero trust required. 100% on-chain.**
 
----
-
-## 🏗️ Project Structure
-
-```
-dealvault-platform-escrow/
-├── backend/                    # Node.js + Express REST API
-│   ├── controllers/            # Request handlers
-│   ├── models/                 # Mongoose schemas (User, Deal)
-│   ├── routes/                 # Auth & Deal routers
-│   ├── middleware/             # JWT auth, error handler
-│   ├── validators/             # express-validator rules
-│   ├── utils/                  # AppError class
-│   ├── tests/                  # Jest integration tests
-│   └── server.js               # App entry point
-│
-├── frontend/                   # React + TypeScript + Vite UI
-│
-├── contracts/
-│   └── solana/                 # Rust on-chain escrow program
-│       └── src/
-│           ├── lib.rs          # Program entrypoint
-│           ├── state.rs        # EscrowAccount struct
-│           ├── error.rs        # EscrowError enum
-│           └── instructions/   # init_escrow, release, refund, dispute
-│
-├── docker/                     # Dockerfiles + docker-compose
-├── docs/                       # API, contracts, architecture, deployment docs
-└── .github/workflows/          # CI/CD pipelines
-```
+- **🛡️ KYC Verified** – Trust but verify all parties involved.
+- **⚡ Instant Settlement** – No wire transfers, no 3-day wait times.
+- **🌍 180+ Countries** – Global by default.
+- **⛓️ 100% On-Chain** – Fully auditable smart contracts.
 
 ---
 
-## 🚀 Quick Start
+## 🛠️ Compatible Stack
+
+Works effortlessly with your favorite tools and networks:
+
+| Wallets | Assets | Frameworks |
+| :--- | :--- | :--- |
+| **Freighter** | **USDC** | **React** |
+| **Lobstr** | **XLM** | **Node.js** |
+| **xBull** | **USDT** | **Express** |
+| **Solar** | **Any Stellar Asset** | **MongoDB** |
+| **Any Stellar Wallet** | | **Soroban** |
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js ≥ 20
 - MongoDB (local or Atlas)
-- (Optional) Docker + Docker Compose
+- Docker (optional for full-stack deployment)
 
-### Option A — Local Development
+### Local Development
 
+1. **Start the Backend**
+   ```bash
+   cd backend
+   cp .env.example .env    # Edit with your JWT secrets and DB URI
+   npm install
+   npm run dev             # Server running on http://localhost:5000
+   ```
+
+2. **Start the Frontend**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev             # Vite dev server on http://localhost:5174
+   ```
+
+### Docker (Full Stack)
+
+Spin up the entire application (Frontend, Backend, and MongoDB) with a single command:
 ```bash
-# Backend
-cd backend
-cp .env.example .env    # Edit with your values
-npm install
-npm run dev             # → http://localhost:5000
-
-# Frontend (separate terminal)
-cd frontend
-npm install
-npm run dev             # → http://localhost:5173
-```
-
-### Option B — Docker (Full Stack)
-
-```bash
-cp backend/.env.example backend/.env   # Set JWT_SECRET at minimum
 cd docker
 docker compose up --build
-# Frontend → http://localhost
-# Backend  → http://localhost:5000
-# MongoDB  → localhost:27017
 ```
 
 ---
 
-## 🧪 Running Tests
+## 🏗️ Project Architecture
+
+```plaintext
+dealvault-platform-escrow/
+├── backend/                    # Node.js + Express REST API
+│   ├── controllers/            # Route business logic
+│   ├── models/                 # Mongoose schemas
+│   ├── routes/                 # API endpoints
+│   └── tests/                  # Jest integration tests
+│
+├── frontend/                   # React + TypeScript + Vite UI
+│   ├── src/
+│   │   ├── components/         # Reusable UI elements
+│   │   ├── images/             # Static assets
+│   │   └── App.tsx             # Main application view
+│
+├── contracts/
+│   └── soroban/                # Rust on-chain escrow program (Stellar)
+│
+└── docker/                     # Dockerfiles & docker-compose.yml
+```
+
+---
+
+## 🔗 Smart Contract (Soroban)
+
+The on-chain escrow program handles trustless fund locking on the Stellar network.
+
+```bash
+# Deploy the contract
+$ stellar contract deploy --wasm escrow.wasm
+```
+
+**Core Instructions:**
+- `init_escrow` — Lock buyer funds in the contract.
+- `release` — Transfer funds securely to the seller.
+- `refund` — Return funds to the buyer if conditions aren't met.
+- `dispute` — Flag for decentralized arbitration.
+
+---
+
+## 🧪 Testing
 
 ```bash
 cd backend
 npm test                  # Run all integration tests
-npm run test:coverage     # Run with coverage report (≥75% required)
+npm run test:coverage     # Generate coverage report
 ```
-
----
-
-## 📚 Documentation
-
-| Document | Description |
-|---|---|
-| [API.md](docs/API.md) | All REST endpoints, request/response schemas |
-| [SMART_CONTRACTS.md](docs/SMART_CONTRACTS.md) | Solana program, instructions, security |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, data models, FSM |
-| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Local, Docker, and production deploy guide |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Branching, commits, PR process, style guide |
-
----
-
-## 🔐 Security
-
-- **Helmet** — Secure HTTP headers
-- **express-rate-limit** — Auth: 5 req/15 min · API: 100 req/min
-- **express-mongo-sanitize** — NoSQL injection prevention
-- **xss-clean** — XSS sanitization
-- **bcryptjs** (cost 12) — Password hashing
-- **JWT** — Stateless auth with expiry
-- **10KB body limit** — Payload size restriction
-- **Non-root Docker user** — Container hardening
-
----
-
-## 🔗 Smart Contract (Solana)
-
-The on-chain escrow program handles trustless fund locking:
-
-```
-Instruction 0: InitEscrow  → lock buyer funds in PDA
-Instruction 1: Release     → transfer funds to seller
-Instruction 2: Refund      → return funds to buyer
-Instruction 3: Dispute     → flag for arbitration
-```
-
-See [SMART_CONTRACTS.md](docs/SMART_CONTRACTS.md) for full details.
 
 ---
 
