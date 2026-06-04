@@ -1,0 +1,24 @@
+[package]
+name = "dealvault-escrow"
+version = "0.1.0"
+edition = "2021"
+description = "DealVault on-chain escrow program for Solana"
+license = "MIT"
+
+[lib]
+name = "dealvault_escrow"
+crate-type = ["cdylib", "lib"]
+
+[features]
+no-entrypoint = []
+
+[dependencies]
+solana-program = "1.18"
+thiserror = "1.0"
+borsh = { version = "0.10", features = ["derive"] }
+borsh-derive = "0.10"
+
+[dev-dependencies]
+solana-program-test = "1.18"
+solana-sdk = "1.18"
+tokio = { version = "1", features = ["full"] }
