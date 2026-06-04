@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="frontend/src/images/DbLogo.png" alt="DealVault Logo" width="120" />
+  <img width="1774" height="887" alt="READMEDEALVAULT" src="https://github.com/user-attachments/assets/94d264ad-7526-40bd-b7bd-420909859f7c" />
   <br />
   <br />
   
