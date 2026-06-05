@@ -52,6 +52,7 @@ module.exports = {
         'fade-in': 'fadeIn 0.4s ease-out forwards',
         'slide-right': 'slideRight 0.5s ease-out forwards',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'shimmer': 'shimmer 2s infinite linear',
       },
       keyframes: {
         fadeUp: {
@@ -65,6 +66,10 @@ module.exports = {
         slideRight: {
           '0%': { opacity: '0', transform: 'translateX(-20px)' },
           '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(200%)' },
         },
       },
     },

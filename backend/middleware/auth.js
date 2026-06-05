@@ -58,3 +58,25 @@ exports.restrictTo = (...roles) => {
     next();
   };
 };
+
+/**
+ * optionalAuth – Attaches the authenticated user to req.user if a valid JWT is present.
+ * Never blocks the request — unauthenticated users simply have req.user = null.
+ */
+exports.optionalAuth = async (req, res, next) => {
+  try {
+    let token;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+    if (!token) return next();
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    if (user) req.user = user;
+    next();
+  } catch {
+    // Invalid token — just continue without attaching user
+    next();
+  }
+};
