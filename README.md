@@ -1,6 +1,6 @@
 <div align="center">
   <img src="frontend/src/images/DbLogo.png" alt="DealVault Logo" width="120" />
-  <br />
+  <br/>
   <br />
   
   <h1>DealVault</h1>
