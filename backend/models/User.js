@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const ROLES = ['buyer', 'seller', 'admin', 'escrow_agent'];
+const ROLES = ['buyer', 'seller', 'admin', 'escrow_agent', 'maintainer', 'contributor'];
 const ACCOUNT_STATUS = ['active', 'suspended', 'pending_verification', 'deactivated'];
 const KYC_STATUS = ['not_submitted', 'pending', 'approved', 'rejected'];
 
@@ -70,9 +70,29 @@ const userSchema = new mongoose.Schema(
     // ── Auth ──────────────────────────────────────────────────────────────────
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      // Not required for GitHub OAuth users
       minlength: [8, 'Password must be at least 8 characters'],
       select: false,   // never returned in queries by default
+    },
+
+    // ── GitHub OAuth ──────────────────────────────────────────────────────────
+    githubId: {
+      type: String,
+      unique: true,
+      sparse: true,   // allows multiple null values
+      select: false,
+    },
+
+    githubUsername: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
+    githubAvatar: {
+      type: String,
+      trim: true,
+      default: null,
     },
 
     // ── Profile ───────────────────────────────────────────────────────────────
@@ -107,6 +127,24 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
       maxlength: [500, 'Bio cannot exceed 500 characters'],
+      default: null,
+    },
+
+    linkedinUrl: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
+    twitterUrl: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
+    portfolioUrl: {
+      type: String,
+      trim: true,
       default: null,
     },
 
@@ -226,7 +264,7 @@ userSchema.virtual('displayName').get(function () {
 
 /** Hash password before saving if it was modified */
 userSchema.pre('save', async function () {
-  if (!this.isModified('password')) return;
+  if (!this.isModified('password') || !this.password) return;
 
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
@@ -292,6 +330,15 @@ userSchema.methods.toSafeObject = function () {
  */
 userSchema.statics.findByEmailWithPassword = function (email) {
   return this.findOne({ email: email.toLowerCase().trim() }).select('+password');
+};
+
+/**
+ * Find a user by their GitHub ID.
+ * @param {string} githubId
+ * @returns {Promise<Document|null>}
+ */
+userSchema.statics.findByGithubId = function (githubId) {
+  return this.findOne({ githubId }).select('+githubId');
 };
 
 // ─── Model Export ─────────────────────────────────────────────────────────────
