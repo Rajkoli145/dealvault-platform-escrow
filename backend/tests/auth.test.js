@@ -204,3 +204,96 @@ describe('POST /api/auth/wallet', () => {
     expect(res.body.message).toContain('already linked');
   });
 });
+
+// ─── PATCH /api/auth/role ─────────────────────────────────────────────────────
+
+describe('PATCH /api/auth/role', () => {
+  it('should update the user role to contributor or maintainer', async () => {
+    const res = await request(app)
+      .patch('/api/auth/role')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ role: 'contributor' });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.user.role).toBe('contributor');
+  });
+
+  it('should reject invalid role selection', async () => {
+    const res = await request(app)
+      .patch('/api/auth/role')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ role: 'invalid_role' });
+
+    expect(res.statusCode).toBe(400);
+  });
+});
+
+// ─── PATCH /api/auth/profile ──────────────────────────────────────────────────
+
+describe('PATCH /api/auth/profile', () => {
+  it('should update user profile links and bio', async () => {
+    const res = await request(app)
+      .patch('/api/auth/profile')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({
+        linkedinUrl: 'https://linkedin.com/in/test',
+        twitterUrl: 'https://twitter.com/test',
+        portfolioUrl: 'https://test.com',
+        bio: 'This is my bio.',
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.user.bio).toBe('This is my bio.');
+    expect(res.body.data.user.linkedinUrl).toBe('https://linkedin.com/in/test');
+  });
+});
+
+// ─── POST /api/auth/logout ────────────────────────────────────────────────────
+
+describe('POST /api/auth/logout', () => {
+  it('should logout and clear jwt cookie', async () => {
+    const res = await request(app)
+      .post('/api/auth/logout');
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+});
+
+// ─── PATCH /api/auth/change-password ──────────────────────────────────────────
+
+describe('PATCH /api/auth/change-password', () => {
+  it('should change password successfully', async () => {
+    const res = await request(app)
+      .patch('/api/auth/change-password')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ currentPassword: 'Secure@1234', newPassword: 'NewSecure@1234' });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.token).toBeDefined();
+  });
+
+  it('should reject incorrect current password', async () => {
+    const res = await request(app)
+      .patch('/api/auth/change-password')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ currentPassword: 'WrongPassword', newPassword: 'NewSecure@1234' });
+
+    expect(res.statusCode).toBe(401);
+  });
+});
+
+describe('POST /api/auth/login - Suspended User', () => {
+  it('should reject login for a suspended account', async () => {
+    const email = 'suspended@test.com';
+    await User.create({ name: 'Suspended User', email, password: 'Secure@1234', role: 'buyer', accountStatus: 'suspended' });
+
+    const res = await request(app).post('/api/auth/login').send({
+      email, password: 'Secure@1234',
+    });
+    expect(res.statusCode).toBe(403);
+  });
+});
