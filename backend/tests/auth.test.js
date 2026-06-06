@@ -13,6 +13,7 @@ let sellerId;
 // ─── Setup / Teardown ─────────────────────────────────────────────────────────
 
 beforeAll(async () => {
+  process.env.JWT_SECRET = process.env.JWT_SECRET || 'test_jwt_secret_that_is_long_enough';
   mongoServer = await MongoMemoryServer.create();
   await mongoose.connect(mongoServer.getUri());
 });
