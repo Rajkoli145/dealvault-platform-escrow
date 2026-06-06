@@ -57,6 +57,15 @@ exports.validateLogin = [
   handleValidationErrors,
 ];
 
+exports.validateLinkWallet = [
+  body('walletAddress')
+    .trim()
+    .notEmpty().withMessage('Wallet address is required')
+    .matches(/^G[A-Z2-7]{55}$/).withMessage('Invalid Stellar public key format'),
+
+  handleValidationErrors,
+];
+
 // ─── Deal Validators ──────────────────────────────────────────────────────────
 
 exports.validateCreateDeal = [

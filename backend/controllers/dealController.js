@@ -180,6 +180,19 @@ exports.updateDealStatus = async (req, res, next) => {
       return next(new AppError('You are not authorized to perform this status transition.', 403));
     }
 
+    // Ensure both buyer and seller have linked wallet addresses for funding/payout actions
+    if (['FUNDED', 'APPROVED', 'RELEASED'].includes(status)) {
+      const buyer = await User.findById(deal.buyerId);
+      const seller = await User.findById(deal.sellerId);
+
+      if (!buyer || !buyer.walletAddress) {
+        return next(new AppError('Buyer must link a Stellar wallet address before this action.', 400));
+      }
+      if (!seller || !seller.walletAddress) {
+        return next(new AppError('Seller must link a Stellar wallet address before this action.', 400));
+      }
+    }
+
     deal.status = status;
     await deal.save();
 
