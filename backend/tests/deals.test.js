@@ -15,6 +15,7 @@ const futureDate = () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOStr
 // ─── Setup / Teardown ─────────────────────────────────────────────────────────
 
 beforeAll(async () => {
+  process.env.JWT_SECRET = process.env.JWT_SECRET || 'test_jwt_secret_that_is_long_enough';
   if (!fs.existsSync('uploads')) {
     fs.mkdirSync('uploads');
   }

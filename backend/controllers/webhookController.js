@@ -1,0 +1,136 @@
+/**
+ * Webhook Controller
+ *
+ * Handles incoming GitHub webhooks for the DealVault Bot.
+ * Verifies signatures and processes issue label events.
+ */
+
+const Issue = require('../models/Issue');
+const { verifyWebhookSignature, postIssueComment } = require('../services/githubBot');
+const { issueAddedMessage } = require('../services/botMessages');
+
+// ── Configuration ─────────────────────────────────────────────────────────────
+
+const TRIGGER_LABEL = 'dealvault';
+
+// ── Handlers ──────────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/webhooks/github
+ * Main GitHub webhook endpoint.
+ *
+ * The request body must be raw (Buffer) for signature verification.
+ * This is handled by express.raw() middleware on this route.
+ */
+exports.handleGitHubWebhook = async (req, res, next) => {
+  try {
+    // ── 1. Verify webhook signature ─────────────────────────────────────────
+    const signature = req.headers['x-hub-signature-256'];
+    const rawBody = req.body; // Buffer, thanks to express.raw()
+
+    if (!verifyWebhookSignature(rawBody, signature)) {
+      console.warn('⚠️  Webhook signature verification failed');
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid webhook signature.',
+      });
+    }
+
+    // ── 2. Parse the payload ────────────────────────────────────────────────
+    let payload;
+    try {
+      payload = JSON.parse(rawBody.toString('utf-8'));
+    } catch {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid JSON payload.',
+      });
+    }
+
+    const event = req.headers['x-github-event'];
+    const action = payload.action;
+
+    console.log(`📩 Webhook received: event=${event}, action=${action}`);
+
+    // ── 3. Route to the appropriate handler ─────────────────────────────────
+
+    // Handle issue labeled event
+    if (event === 'issues' && action === 'labeled') {
+      await handleIssueLabeled(payload);
+    }
+
+    // Acknowledge the webhook (GitHub expects a 2xx response quickly)
+    return res.status(200).json({ success: true, message: 'Webhook processed.' });
+  } catch (err) {
+    console.error('❌ Webhook processing error:', err.message);
+    // Still return 200 to GitHub to prevent retries on application errors
+    return res.status(200).json({ success: true, message: 'Webhook received (with errors).' });
+  }
+};
+
+// ── Internal Handlers ─────────────────────────────────────────────────────────
+
+/**
+ * Handle the `issues.labeled` event.
+ * When the `dealvault` label is added, register the issue on the platform
+ * and post the bot comment.
+ */
+async function handleIssueLabeled(payload) {
+  const label = payload.label;
+  const issue = payload.issue;
+  const repo = payload.repository;
+  const sender = payload.sender;
+
+  // Only act on the trigger label
+  if (!label || label.name.toLowerCase() !== TRIGGER_LABEL) {
+    console.log(`ℹ️  Ignoring label "${label?.name}" (not "${TRIGGER_LABEL}")`);
+    return;
+  }
+
+  const repoFullName = repo.full_name;
+  const issueNumber = issue.number;
+  const issueUrl = issue.html_url;
+
+  console.log(`🏷️  Label "${TRIGGER_LABEL}" added to ${repoFullName}#${issueNumber} by ${sender.login}`);
+
+  // ── Check if issue is already tracked ───────────────────────────────────
+  const existing = await Issue.findOne({
+    githubRepoFullName: repoFullName,
+    githubIssueNumber: issueNumber,
+  });
+
+  if (existing) {
+    console.log(`ℹ️  Issue ${repoFullName}#${issueNumber} is already tracked on the platform.`);
+    return;
+  }
+
+  // ── Create the Issue record ─────────────────────────────────────────────
+  const platformIssue = await Issue.create({
+    githubIssueNumber: issueNumber,
+    githubIssueUrl: issueUrl,
+    githubRepoFullName: repoFullName,
+    title: issue.title,
+    body: issue.body || '',
+    labels: issue.labels.map((l) => l.name),
+    addedBy: sender.login,
+    status: 'open',
+    funding: 0,          // Maintainer sets this via the platform dashboard
+    fundingCurrency: 'USD',
+  });
+
+  console.log(`✅ Issue ${repoFullName}#${issueNumber} added to DealVault platform.`);
+
+  // ── Post the bot comment on GitHub ──────────────────────────────────────
+  const comment = issueAddedMessage({
+    issueNumber,
+    repoFullName,
+    funding: platformIssue.funding,
+    fundingCurrency: platformIssue.fundingCurrency,
+  });
+
+  await postIssueComment(repoFullName, issueNumber, comment);
+  console.log(`💬 Bot comment posted on ${repoFullName}#${issueNumber}`);
+}
+
+// Export for testing
+exports._handleIssueLabeled = handleIssueLabeled;
