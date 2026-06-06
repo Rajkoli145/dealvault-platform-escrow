@@ -92,4 +92,24 @@ describe('User Model', () => {
       User.create({ name: 'Second', email: 'duplicate@test.com', password: 'Secure@1234' })
     ).rejects.toThrow();
   });
+
+  it('should evaluate changedPasswordAfter correctly', () => {
+    const user = new User({ passwordChangedAt: new Date(Date.now() - 5000) });
+    expect(user.changedPasswordAfter(Math.floor(Date.now() / 1000) - 10)).toBe(true);
+    expect(user.changedPasswordAfter(Math.floor(Date.now() / 1000) + 10)).toBe(false);
+    const userNoPwChange = new User({});
+    expect(userNoPwChange.changedPasswordAfter(Math.floor(Date.now() / 1000))).toBe(false);
+  });
+
+  it('should find user by githubId', async () => {
+    await User.create({ name: 'Github User', email: 'gh@test.com', githubId: '12345', password: 'Secure@1234' });
+    const user = await User.findByGithubId('12345');
+    expect(user).toBeDefined();
+    expect(user.name).toBe('Github User');
+  });
+
+  it('should return email as displayName if name is missing', () => {
+    const user = new User({ email: 'noname@test.com' });
+    expect(user.displayName).toBe('noname@test.com');
+  });
 });

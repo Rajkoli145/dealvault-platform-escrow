@@ -4,12 +4,20 @@ import Image from 'next/image';
 import { Github, Menu, X, LogOut, Lock, ChevronDown, User, HelpCircle, Clock, Newspaper, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { WalletConnectButton } from './WalletConnectButton';
 
 const GITHUB_AUTH_URL = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL}/auth/github`
   : 'http://localhost:5001/api/auth/github';
 
-export default function NavBar() {
+interface NavBarProps {
+  connectedAddress: string | null;
+  isConnecting: boolean;
+  onConnect: () => void;
+  onDisconnect: () => void;
+}
+
+export default function NavBar({ connectedAddress, isConnecting, onConnect, onDisconnect }: NavBarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled]     = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -60,6 +68,12 @@ export default function NavBar() {
 
         {/* RIGHT — Auth buttons */}
         <div className="flex items-center justify-end gap-3">
+          <WalletConnectButton
+            connectedAddress={connectedAddress}
+            isConnecting={isConnecting}
+            onConnect={onConnect}
+            onDisconnect={onDisconnect}
+          />
           {!isLoading && user ? (
             /* ── Logged-in state ── */
             <>
@@ -206,7 +220,6 @@ export default function NavBar() {
               </button>
             </>
           )}
-
           <button className="md:hidden text-gray-600 hover:text-gray-900" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -223,18 +236,28 @@ export default function NavBar() {
               {item}
             </a>
           ))}
-          <div className="flex gap-3 mt-4">
-            {user ? (
-              <>
-                <a href="/dashboard" className="flex-1 text-sm bg-black text-white rounded-lg py-2 font-medium text-center">Profile</a>
-                <button onClick={logout} className="flex-1 text-sm border border-gray-200 rounded-lg py-2 text-gray-700 font-medium">Sign out</button>
-              </>
-            ) : (
-              <>
-                <button onClick={handleGetStarted} className="flex-1 text-sm border border-gray-200 rounded-lg py-2 text-gray-700 font-medium text-center">GitHub</button>
-                <button onClick={handleGetStarted} className="flex-1 text-sm bg-black text-white rounded-lg py-2 font-medium">Get started</button>
-              </>
-            )}
+          <div className="flex gap-3 mt-4 flex-col">
+            <div className="flex justify-center">
+              <WalletConnectButton
+                connectedAddress={connectedAddress}
+                isConnecting={isConnecting}
+                onConnect={onConnect}
+                onDisconnect={onDisconnect}
+              />
+            </div>
+            <div className="flex gap-3">
+              {user ? (
+                <>
+                  <a href="/dashboard" className="flex-1 text-sm bg-black text-white rounded-lg py-2 font-medium text-center">Profile</a>
+                  <button onClick={logout} className="flex-1 text-sm border border-gray-200 rounded-lg py-2 text-gray-700 font-medium">Sign out</button>
+                </>
+              ) : (
+                <>
+                  <button onClick={handleGetStarted} className="flex-1 text-sm border border-gray-200 rounded-lg py-2 text-gray-700 font-medium text-center">GitHub</button>
+                  <button onClick={handleGetStarted} className="flex-1 text-sm bg-black text-white rounded-lg py-2 font-medium">Get started</button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

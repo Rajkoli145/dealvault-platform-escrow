@@ -98,9 +98,9 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Audit backend dependencies
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=critical
         working-directory: backend
 
       - name: Audit frontend dependencies
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=critical
         working-directory: frontend

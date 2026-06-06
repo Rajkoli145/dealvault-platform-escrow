@@ -66,9 +66,7 @@ export default function BountiesPage() {
   };
 
   const handleApply = (bounty: (typeof demoBounties)[number]) => {
-    const applications = applyToDemoBounty(bounty);
-    setAppliedIds(applications.map((application) => application.id));
-    router.push('/bounties/my');
+    router.push(`/bounties/${bounty.id}`);
   };
 
   const avatarSrc = user.githubAvatar || user.avatar;

@@ -158,3 +158,142 @@ describe('GET /api/auth/me', () => {
     expect(res.statusCode).toBe(401);
   });
 });
+
+// ─── POST /api/auth/wallet ────────────────────────────────────────────────────
+
+describe('POST /api/auth/wallet', () => {
+  it('should link a valid Stellar wallet address', async () => {
+    const validAddress = 'GA5W247FEJSIBI2LNITA4DIP3ESP3BYCXU6IX4K67HK26LODH6H7G2G7';
+    const res = await request(app)
+      .post('/api/auth/wallet')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ walletAddress: validAddress });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.user.walletAddress).toBe(validAddress.toLowerCase());
+  });
+
+  it('should reject invalid Stellar wallet address format', async () => {
+    const res = await request(app)
+      .post('/api/auth/wallet')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ walletAddress: 'GA5W247F_INVALID_FORMAT' });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBe('VALIDATION_ERROR');
+  });
+
+  it('should reject linking a wallet address already in use by another user', async () => {
+    const sharedAddress = 'GB2SIBIDLNITA4DIP3ESP3BYCXU6IX4K67HK26LODH6H7G2G7XXXXXXX';
+
+    // Link buyer
+    await request(app)
+      .post('/api/auth/wallet')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ walletAddress: sharedAddress });
+
+    // Attempt to link seller to the same wallet address
+    const res = await request(app)
+      .post('/api/auth/wallet')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ walletAddress: sharedAddress });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toContain('already linked');
+  });
+});
+
+// ─── PATCH /api/auth/role ─────────────────────────────────────────────────────
+
+describe('PATCH /api/auth/role', () => {
+  it('should update the user role to contributor or maintainer', async () => {
+    const res = await request(app)
+      .patch('/api/auth/role')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ role: 'contributor' });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.user.role).toBe('contributor');
+  });
+
+  it('should reject invalid role selection', async () => {
+    const res = await request(app)
+      .patch('/api/auth/role')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ role: 'invalid_role' });
+
+    expect(res.statusCode).toBe(400);
+  });
+});
+
+// ─── PATCH /api/auth/profile ──────────────────────────────────────────────────
+
+describe('PATCH /api/auth/profile', () => {
+  it('should update user profile links and bio', async () => {
+    const res = await request(app)
+      .patch('/api/auth/profile')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({
+        linkedinUrl: 'https://linkedin.com/in/test',
+        twitterUrl: 'https://twitter.com/test',
+        portfolioUrl: 'https://test.com',
+        bio: 'This is my bio.',
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.user.bio).toBe('This is my bio.');
+    expect(res.body.data.user.linkedinUrl).toBe('https://linkedin.com/in/test');
+  });
+});
+
+// ─── POST /api/auth/logout ────────────────────────────────────────────────────
+
+describe('POST /api/auth/logout', () => {
+  it('should logout and clear jwt cookie', async () => {
+    const res = await request(app)
+      .post('/api/auth/logout');
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+});
+
+// ─── PATCH /api/auth/change-password ──────────────────────────────────────────
+
+describe('PATCH /api/auth/change-password', () => {
+  it('should change password successfully', async () => {
+    const res = await request(app)
+      .patch('/api/auth/change-password')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ currentPassword: 'Secure@1234', newPassword: 'NewSecure@1234' });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.token).toBeDefined();
+  });
+
+  it('should reject incorrect current password', async () => {
+    const res = await request(app)
+      .patch('/api/auth/change-password')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ currentPassword: 'WrongPassword', newPassword: 'NewSecure@1234' });
+
+    expect(res.statusCode).toBe(401);
+  });
+});
+
+describe('POST /api/auth/login - Suspended User', () => {
+  it('should reject login for a suspended account', async () => {
+    const email = 'suspended@test.com';
+    await User.create({ name: 'Suspended User', email, password: 'Secure@1234', role: 'buyer', accountStatus: 'suspended' });
+
+    const res = await request(app).post('/api/auth/login').send({
+      email, password: 'Secure@1234',
+    });
+    expect(res.statusCode).toBe(403);
+  });
+});
