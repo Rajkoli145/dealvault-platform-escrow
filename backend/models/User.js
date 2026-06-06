@@ -233,6 +233,19 @@ const userSchema = new mongoose.Schema(
         ref: 'Deal',
       },
     ],
+
+    // ── Social Stats ──────────────────────────────────────────────────────────
+    followers: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    following: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true,               // adds createdAt & updatedAt

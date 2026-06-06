@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
-import {
-  Search, ChevronDown, SlidersHorizontal,
-  GitBranch, Clock, LogOut, LayoutDashboard, Inbox
+import { Search, ChevronDown, SlidersHorizontal,
+  GitBranch, Clock, LogOut, LayoutDashboard, Inbox,
+  Wallet, User, HelpCircle, Newspaper, ExternalLink, DollarSign, Send
 } from 'lucide-react';
 import Image from 'next/image';
+import { SkeletonIssues } from '../../components/SkeletonLoader';
+import { applyToDemoBounty, demoBounties, readDemoApplications } from '../../lib/demoFlow';
 
 const LABEL_OPTIONS = ['All Labels', 'bug', 'enhancement', 'documentation', 'good first issue', 'help wanted'];
 const STACK_OPTIONS = ['All Tech Stack', 'TypeScript', 'Rust', 'Python', 'Solidity', 'Go'];
@@ -20,11 +22,35 @@ export default function BountiesPage() {
   const [labelFilter, setLabelFilter] = useState('All Labels');
   const [stackFilter, setStackFilter] = useState('All Tech Stack');
   const [sortFilter, setSortFilter] = useState('Most Recent');
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [appliedIds, setAppliedIds] = useState<string[]>([]);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    setAppliedIds(readDemoApplications().map((application) => application.id));
+  }, []);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="w-10 h-10 rounded-full border-2 border-gray-100 border-t-black animate-spin" />
+      <div className="min-h-screen bg-white flex flex-col">
+        <header className="border-b border-gray-100 px-8 h-20 grid grid-cols-3 items-center sticky top-0 bg-white/90 backdrop-blur-sm z-30">
+          <div className="flex items-center gap-2 cursor-pointer -ml-2">
+            <Image src="/images/DbLogo.png" alt="DealVault" width={240} height={96} className="h-20 w-auto object-contain object-left" />
+          </div>
+        </header>
+        <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-10">
+          <SkeletonIssues />
+        </main>
       </div>
     );
   }
@@ -39,22 +65,25 @@ export default function BountiesPage() {
     router.replace('/');
   };
 
+  const handleApply = (bounty: (typeof demoBounties)[number]) => {
+    router.push(`/bounties/${bounty.id}`);
+  };
+
   const avatarSrc = user.githubAvatar || user.avatar;
   const initial = user.name?.[0]?.toUpperCase() || 'U';
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* ─── Top Nav ──────────────────────────────────────────── */}
-      <header className="border-b border-gray-100 px-6 py-3 flex items-center justify-between sticky top-0 bg-white/90 backdrop-blur-sm z-30">
-        <div className="flex items-center gap-3">
-          <Image src="/favicon.png" alt="DealVault" width={32} height={32} className="rounded-lg" />
-          <span className="font-bold text-gray-900 text-lg tracking-tight">DealVault</span>
+      <header className="border-b border-gray-100 px-8 h-20 grid grid-cols-3 items-center sticky top-0 bg-white/90 backdrop-blur-sm z-30">
+        <div className="flex items-center gap-2 cursor-pointer -ml-2" onClick={() => router.push('/')}>
+          <Image src="/images/DbLogo.png" alt="DealVault" width={240} height={96} className="h-20 w-auto object-contain object-left hover:opacity-80 transition-opacity" />
         </div>
 
         {/* Nav Links */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center justify-center gap-1">
           {[
-            { label: 'Profile', icon: LayoutDashboard, href: '/dashboard' },
+            { label: 'Financial', icon: Wallet, href: '/financial' },
             { label: 'Explore Issues', icon: GitBranch, href: '/bounties', active: true },
             { label: 'My Applications', icon: Inbox, href: '/bounties/my' },
           ].map(({ label, icon: Icon, href, active }) => (
@@ -73,28 +102,109 @@ export default function BountiesPage() {
           ))}
         </nav>
 
-        {/* User */}
-        <div className="flex items-center gap-3">
-          <div className="text-right hidden md:block">
-            <p className="text-sm font-semibold text-gray-900">{user.name}</p>
-            {user.githubUsername && (
-              <p className="text-xs text-gray-400">@{user.githubUsername}</p>
+        {/* User with Dropdown */}
+        <div className="flex items-center justify-end gap-3">
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setProfileOpen(!profileOpen)}
+              className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+            >
+              {avatarSrc ? (
+                <Image
+                  src={avatarSrc}
+                  alt={user.name}
+                  width={32}
+                  height={32}
+                  className="rounded-full ring-2 ring-gray-200 hover:ring-gray-300 transition-all"
+                  unoptimized
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-xs text-white font-bold">
+                  {initial}
+                </div>
+              )}
+              <span className="hidden lg:block">{user.name.split(' ')[0]}</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Dropdown Menu */}
+            {profileOpen && (
+              <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-fade-in">
+                {/* Profile Section */}
+                <div className="p-4 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    {avatarSrc ? (
+                      <Image
+                        src={avatarSrc}
+                        alt={user.name}
+                        width={48}
+                        height={48}
+                        className="rounded-full ring-2 ring-gray-200"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-black flex items-center justify-center text-sm text-white font-bold">
+                        {initial}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 truncate">{user.name}</p>
+                      <p className="text-xs text-gray-500 truncate">@{user.githubUsername || user.email}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { router.push('/profile'); setProfileOpen(false); }}
+                    className="mt-3 w-full flex items-center justify-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 py-2 rounded-lg transition-colors"
+                  >
+                    <User className="w-4 h-4" />
+                    View Profile
+                  </button>
+                </div>
+
+                {/* Maintainer App */}
+                <div className="p-2 border-b border-gray-100">
+                  <button
+                    onClick={() => { router.push('/financial'); setProfileOpen(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <Wallet className="w-4 h-4 text-gray-500" />
+                    <span>Financial</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-400 ml-auto" />
+                  </button>
+                </div>
+
+                {/* Resources Section */}
+                <div className="p-2 border-b border-gray-100">
+                  <p className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Resources</p>
+                  <button
+                    onClick={() => { setProfileOpen(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <HelpCircle className="w-4 h-4 text-gray-500" />
+                    <span>FAQ</span>
+                  </button>
+                  <button
+                    onClick={() => { setProfileOpen(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <Newspaper className="w-4 h-4 text-gray-500" />
+                    <span>News</span>
+                  </button>
+                </div>
+
+                {/* Account Section */}
+                <div className="p-2">
+                  <button
+                    onClick={() => { logout(); router.push('/'); setProfileOpen(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </div>
             )}
           </div>
-          <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-gray-200 shrink-0">
-            {avatarSrc ? (
-              <Image src={avatarSrc} alt={user.name} width={36} height={36} className="object-cover" unoptimized />
-            ) : (
-              <div className="w-full h-full bg-black flex items-center justify-center text-white text-sm font-medium">{initial}</div>
-            )}
-          </div>
-          <button
-            onClick={handleLogout}
-            className="w-9 h-9 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors"
-            title="Sign out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
         </div>
       </header>
 
@@ -109,8 +219,8 @@ export default function BountiesPage() {
             </p>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-0.5">Total Issues</p>
-            <p className="text-5xl font-bold text-gray-900 tracking-tight">0</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-0.5">Funded Issues</p>
+            <p className="text-5xl font-bold text-gray-900 tracking-tight">{demoBounties.length}</p>
           </div>
         </div>
 
@@ -152,15 +262,55 @@ export default function BountiesPage() {
           </button>
         </div>
 
-        {/* ─── Empty State ────────────────────────────────────── */}
-        <div className="flex flex-col items-center justify-center py-28 text-center">
-          <div className="w-16 h-16 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-center mb-5">
-            <GitBranch className="w-8 h-8 text-gray-300" />
-          </div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">No issues found</h2>
-          <p className="text-gray-400 text-sm max-w-xs leading-relaxed">
-            There are no open bounties at the moment. Check back soon — funded issues will appear here.
-          </p>
+        {/* ─── Funded Issues ──────────────────────────────────── */}
+        <div className="grid grid-cols-1 gap-4">
+          {demoBounties.map((bounty) => {
+            const applied = appliedIds.includes(bounty.id);
+
+            return (
+              <div key={bounty.id} className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                  <div className="min-w-0">
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                        <DollarSign className="h-3.5 w-3.5" />
+                        ${bounty.reward.toFixed(2)}
+                      </span>
+                      <span className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600">{bounty.label}</span>
+                      <span className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600">{bounty.stack}</span>
+                    </div>
+                    <h2 className="truncate text-lg font-bold text-gray-900">{bounty.title}</h2>
+                    <p className="mt-1 text-sm text-gray-500">{bounty.repo}</p>
+                    <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">{bounty.description}</p>
+                    <div className="mt-4 flex items-center gap-4 text-xs font-semibold uppercase tracking-widest text-gray-400">
+                      <span>{bounty.applicants + (applied ? 1 : 0)} applicants</span>
+                      <span>{bounty.posted}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => applied ? router.push('/bounties/my') : handleApply(bounty)}
+                    className={`inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
+                      applied
+                        ? 'border border-gray-300 bg-white text-gray-800 hover:bg-gray-100'
+                        : 'bg-gray-900 text-white hover:bg-gray-800'
+                    }`}
+                  >
+                    {applied ? (
+                      <>
+                        <Inbox className="h-4 w-4" />
+                        View application
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        Apply
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </main>
     </div>
