@@ -17,6 +17,9 @@ export interface AuthUser {
   linkedinUrl: string | null;
   twitterUrl: string | null;
   portfolioUrl: string | null;
+  createdAt?: string;
+  followers?: number;
+  following?: number;
 }
 
 interface AuthContextValue {

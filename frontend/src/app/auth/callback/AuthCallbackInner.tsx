@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function AuthCallbackInner() {
-  const { loginWithToken } = useAuth();
+  const { loginWithToken, user } = useAuth();
   const router             = useRouter();
   const searchParams       = useSearchParams();
   useEffect(() => {
@@ -17,14 +17,26 @@ export default function AuthCallbackInner() {
       return;
     }
 
-    // Store token + fetch /api/auth/me, then navigate to dashboard
+    // Store token + fetch /api/auth/me
     loginWithToken(token);
-    const timer = setTimeout(() => {
-      router.replace('/dashboard');
-    }, 800);
-
-    return () => clearTimeout(timer);
   }, [loginWithToken, router, searchParams]);
+
+  // Redirect based on user role after user data is loaded
+  useEffect(() => {
+    if (user) {
+      const timer = setTimeout(() => {
+        if (user.role === 'buyer') {
+          router.replace('/onboarding');
+        } else if (user.role === 'contributor') {
+          router.replace('/bounties');
+        } else {
+          router.replace('/dashboard');
+        }
+      }, 800);
+
+      return () => clearTimeout(timer);
+    }
+  }, [user, router]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-6">

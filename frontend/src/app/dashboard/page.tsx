@@ -27,7 +27,6 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!isLoading && !user) router.replace('/');
     else if (!isLoading && user && user.role === 'buyer') router.replace('/onboarding');
-    else if (!isLoading && user && user.role === 'contributor') router.replace('/bounties');
   }, [user, isLoading, router]);
 
   // Pre-fill fields from user object
@@ -79,6 +78,26 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     logout();
     router.replace('/');
+  };
+
+  const handleRoleSwitch = async (newRole: 'maintainer' | 'contributor') => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API}/auth/role`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (res.ok) {
+        loginWithToken(token);
+        router.replace('/dashboard');
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -141,127 +160,37 @@ export default function DashboardPage() {
             </div>
 
             {/* Role badge */}
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black text-white text-xs font-semibold capitalize">
-              <UserIcon className="w-3 h-3" />
-              {user.role}
-            </span>
-          </div>
-        </div>
-
-        {/* Social Links Form */}
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
-          <h2 className="text-lg font-bold text-gray-900 mb-1 tracking-tight">Complete your profile</h2>
-          <p className="text-gray-400 text-sm mb-8">Add your social profiles so maintainers and contributors can verify your identity.</p>
-
-          <form onSubmit={handleSave} className="space-y-5">
-            {/* GitHub (read-only) */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">GitHub</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Github className="w-4 h-4 text-gray-400" />
-                </div>
-                <input
-                  type="url"
-                  value={user.githubUsername ? `https://github.com/${user.githubUsername}` : ''}
-                  readOnly
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
-                  placeholder="https://github.com/username"
-                />
-              </div>
-              <p className="text-xs text-gray-400 mt-1.5">Auto-filled from your GitHub account</p>
-            </div>
-
-            {/* LinkedIn */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">LinkedIn</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Linkedin className="w-4 h-4 text-gray-400" />
-                </div>
-                <input
-                  type="url"
-                  value={linkedinUrl}
-                  onChange={e => setLinkedinUrl(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 transition-colors"
-                  placeholder="https://linkedin.com/in/yourname"
-                />
-              </div>
-            </div>
-
-            {/* Twitter / X */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Twitter / X</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Twitter className="w-4 h-4 text-gray-400" />
-                </div>
-                <input
-                  type="url"
-                  value={twitterUrl}
-                  onChange={e => setTwitterUrl(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 transition-colors"
-                  placeholder="https://x.com/yourhandle"
-                />
-              </div>
-            </div>
-
-            {/* Portfolio */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Portfolio / Website</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Globe className="w-4 h-4 text-gray-400" />
-                </div>
-                <input
-                  type="url"
-                  value={portfolioUrl}
-                  onChange={e => setPortfolioUrl(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 transition-colors"
-                  placeholder="https://yourwebsite.com"
-                />
-              </div>
-            </div>
-
-            {/* Bio */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Bio</label>
-              <textarea
-                value={bio}
-                onChange={e => setBio(e.target.value)}
-                rows={3}
-                maxLength={500}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 transition-colors resize-none"
-                placeholder="Tell maintainers a little about yourself..."
-              />
-              <p className="text-xs text-gray-400 mt-1 text-right">{bio.length}/500</p>
-            </div>
-
-            {error && (
-              <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-xl px-4 py-3">{error}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={saving}
-              className={`relative overflow-hidden w-full py-3.5 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-                saved
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-black text-white hover:bg-gray-900 shadow-md'
-              }`}
-            >
-              {saving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : saved ? (
-                <>
-                  <Check className="w-4 h-4 stroke-[3]" />
-                  Profile saved!
-                </>
-              ) : (
-                'Save Profile'
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black text-white text-xs font-semibold capitalize">
+                <UserIcon className="w-3 h-3" />
+                {user.role}
+              </span>
+              {user.role === 'contributor' && (
+                <button
+                  onClick={() => handleRoleSwitch('maintainer')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 text-xs font-medium transition-colors"
+                >
+                  Switch to Maintainer
+                </button>
               )}
-            </button>
-          </form>
+              {user.role === 'maintainer' && (
+                <>
+                  <button
+                    onClick={() => handleRoleSwitch('contributor')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 text-xs font-medium transition-colors"
+                  >
+                    Switch to Contributor
+                  </button>
+                  <button
+                    onClick={() => router.push('/bounties')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 text-xs font-medium transition-colors"
+                  >
+                    Explore Bounties
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </main>
     </div>
