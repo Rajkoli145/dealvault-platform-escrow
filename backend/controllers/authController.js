@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const axios = require('axios');
 const AppError = require('../utils/AppError');
 
 // ─── Token Helper ─────────────────────────────────────────────────────────────
@@ -145,6 +146,164 @@ exports.changePassword = async (req, res, next) => {
     sendTokenResponse(user, 200, res);
   } catch (err) {
     next(err);
+  }
+};
+
+/**
+ * PATCH /api/auth/role
+ */
+exports.updateRole = async (req, res, next) => {
+  try {
+    const { role } = req.body;
+    if (!['maintainer', 'contributor'].includes(role)) {
+      return next(new AppError('Invalid role selection.', 400));
+    }
+    const user = await User.findById(req.user._id);
+    user.role = role;
+    await user.save({ validateBeforeSave: false });
+    
+    res.status(200).json({
+      success: true,
+      data: { user: user.toSafeObject() }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PATCH /api/auth/profile
+ */
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const { linkedinUrl, twitterUrl, portfolioUrl, bio } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) return next(new AppError('User not found.', 404));
+
+    if (linkedinUrl  !== undefined) user.linkedinUrl  = linkedinUrl;
+    if (twitterUrl   !== undefined) user.twitterUrl   = twitterUrl;
+    if (portfolioUrl !== undefined) user.portfolioUrl = portfolioUrl;
+    if (bio          !== undefined) user.bio          = bio;
+
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      success: true,
+      data: { user: user.toSafeObject() }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── GitHub OAuth ─────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/auth/github
+ * Redirects the browser to GitHub's OAuth authorization page.
+ */
+exports.githubRedirect = (req, res) => {
+  const params = new URLSearchParams({
+    client_id: process.env.GITHUB_CLIENT_ID,
+    redirect_uri: process.env.GITHUB_CALLBACK_URL,
+    scope: 'read:user user:email',
+  });
+  res.redirect(`https://github.com/login/oauth/authorize?${params}`);
+};
+
+/**
+ * GET /api/auth/github/callback
+ * GitHub redirects here with ?code=. Exchange → fetch profile → upsert user → issue JWT.
+ */
+exports.githubCallback = async (req, res, next) => {
+  try {
+    const { code } = req.query;
+    if (!code) return next(new AppError('GitHub OAuth code missing.', 400));
+
+    // 1) Exchange code for access token
+    const tokenRes = await axios.post(
+      'https://github.com/login/oauth/access_token',
+      {
+        client_id:     process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code,
+        redirect_uri:  process.env.GITHUB_CALLBACK_URL,
+      },
+      { headers: { Accept: 'application/json' } }
+    );
+
+    const { access_token, error } = tokenRes.data;
+    if (error || !access_token) {
+      return next(new AppError('Failed to obtain GitHub access token.', 502));
+    }
+
+    // 2) Fetch GitHub user profile
+    const [profileRes, emailsRes] = await Promise.all([
+      axios.get('https://api.github.com/user', {
+        headers: { Authorization: `Bearer ${access_token}`, 'User-Agent': 'DealVault' },
+      }),
+      axios.get('https://api.github.com/user/emails', {
+        headers: { Authorization: `Bearer ${access_token}`, 'User-Agent': 'DealVault' },
+      }),
+    ]);
+
+    const githubProfile = profileRes.data;
+    const emails       = emailsRes.data;
+
+    // Pick primary verified email, fall back to profile email
+    const primaryEmail =
+      (emails.find((e) => e.primary && e.verified) ||
+       emails.find((e) => e.primary) ||
+       emails[0])?.email ||
+      githubProfile.email;
+
+    if (!primaryEmail) {
+      return next(new AppError('Could not retrieve a verified email from GitHub. Please make sure your GitHub account has a public or verified email.', 400));
+    }
+
+    // 3) Upsert user (find by githubId first, then email)
+    let user = await User.findByGithubId(String(githubProfile.id));
+
+    if (!user) {
+      // Check if an email-based account already exists — link it
+      user = await User.findOne({ email: primaryEmail.toLowerCase().trim() });
+    }
+
+    if (user) {
+      // Existing user — update GitHub fields
+      user.githubId       = String(githubProfile.id);
+      user.githubUsername = githubProfile.login;
+      user.githubAvatar   = githubProfile.avatar_url;
+      if (!user.avatar) user.avatar = githubProfile.avatar_url;
+      user.lastLoginAt    = new Date();
+      user.accountStatus  = 'active';
+      user.isEmailVerified = true;
+      await user.save({ validateBeforeSave: false });
+    } else {
+      // New user — create from GitHub profile
+      user = await User.create({
+        name:           githubProfile.name || githubProfile.login,
+        email:          primaryEmail.toLowerCase().trim(),
+        githubId:       String(githubProfile.id),
+        githubUsername: githubProfile.login,
+        githubAvatar:   githubProfile.avatar_url,
+        avatar:         githubProfile.avatar_url,
+        bio:            githubProfile.bio || null,
+        role:           'buyer',
+        accountStatus:  'active',
+        isEmailVerified: true,
+        lastLoginAt:    new Date(),
+      });
+    }
+
+    // 4) Sign JWT and redirect back to frontend
+    const token = signToken(user._id);
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    res.redirect(`${clientUrl}/auth/callback?token=${token}`);
+  } catch (err) {
+    console.error('GitHub OAuth Error:', err);
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    res.redirect(`${clientUrl}/?auth=error&msg=${encodeURIComponent('Database connection failed. Please try again.')}`);
   }
 };
 

@@ -1,6 +1,6 @@
 <div align="center">
-  <img width="1774" height="887" alt="READMEDEALVAULT" src="https://github.com/user-attachments/assets/94d264ad-7526-40bd-b7bd-420909859f7c" />
-  <br />
+<img width="1774" height="887" alt="READMEDEALVAULT" src="https://github.com/user-attachments/assets/b92d8e95-8578-4ef5-8aee-612f15f7ec21" />
+  <br/>
   <br />
   
   <h1>DealVault</h1>

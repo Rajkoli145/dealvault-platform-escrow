@@ -21,7 +21,6 @@ dist-ssr
 *.sln
 *.sw?
 .env
-
 # Next.js build output
 .next/
 out/
