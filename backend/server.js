@@ -65,6 +65,9 @@ const apiLimiter = rateLimit({
 
 // ─── Body Parsing & Sanitization ─────────────────────────────────────────────
 
+// Raw body for GitHub webhook signature verification (must be before json parser)
+app.use('/api/webhooks/github', express.raw({ type: 'application/json' }));
+
 app.use(express.json({ limit: '10kb' }));         // Limit payload size
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
@@ -96,6 +99,11 @@ if (process.env.NODE_ENV !== 'test') {
 // Mount routers
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/deals', require('./routes/deals'));
+
+// DealVault Bot routes
+app.use('/api/webhooks', require('./routes/webhooks'));
+app.use('/api/applications', require('./routes/applications'));
+app.use('/api/issues', require('./routes/issues'));
 
 // ─── Unmatched Routes ─────────────────────────────────────────────────────────
 
