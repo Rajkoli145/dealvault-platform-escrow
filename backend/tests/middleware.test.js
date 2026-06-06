@@ -4,6 +4,8 @@ const helpers = require('../utils/helpers');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test_jwt_secret_that_is_long_enough';
+
 describe('OptionalAuth Middleware', () => {
   it('should proceed if no token is provided', async () => {
     const req = { headers: {} };
@@ -16,7 +18,7 @@ describe('OptionalAuth Middleware', () => {
     expect(req.user).toBeUndefined();
   });
 
-  it('should attach user if valid token is provided', async () => {
+  it('should attach user if valid token is provided but user does not exist', async () => {
     const userId = new mongoose.Types.ObjectId();
     const token = jwt.sign({ id: userId }, process.env.JWT_SECRET || 'test_jwt_secret_that_is_long_enough');
 
@@ -24,11 +26,31 @@ describe('OptionalAuth Middleware', () => {
     const res = {};
     const next = jest.fn();
 
+    const findSpy = jest.spyOn(User, 'findById').mockResolvedValue(null);
+
     await optionalAuth(req, res, next);
 
-    // Mongoose connection isn't mocked here, so query will return null, but next is still called
     expect(next).toHaveBeenCalled();
     expect(req.user).toBeUndefined();
+    findSpy.mockRestore();
+  });
+
+  it('should attach user if valid token is provided and user exists', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    const token = jwt.sign({ id: userId }, process.env.JWT_SECRET || 'test_jwt_secret_that_is_long_enough');
+
+    const req = { headers: { authorization: `Bearer ${token}` } };
+    const res = {};
+    const next = jest.fn();
+
+    const mockUser = { _id: userId, name: 'Test User' };
+    const findSpy = jest.spyOn(User, 'findById').mockResolvedValue(mockUser);
+
+    await optionalAuth(req, res, next);
+
+    expect(next).toHaveBeenCalled();
+    expect(req.user).toBe(mockUser);
+    findSpy.mockRestore();
   });
 
   it('should ignore invalid token and proceed', async () => {
