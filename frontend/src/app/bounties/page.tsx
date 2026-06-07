@@ -43,9 +43,9 @@ export default function BountiesPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-white flex flex-col">
-        <header className="border-b border-gray-100 px-8 h-20 grid grid-cols-3 items-center sticky top-0 bg-white/90 backdrop-blur-sm z-30">
+        <header className="border-b border-gray-100 px-8 h-16 grid grid-cols-3 items-center sticky top-0 bg-white/90 backdrop-blur-sm z-30">
           <div className="flex items-center gap-2 cursor-pointer -ml-2">
-            <Image src="/images/DbLogo.png" alt="DealVault" width={240} height={96} className="h-20 w-auto object-contain object-left" />
+            <Image src="/images/DbLogo.png" alt="DealVault" width={160} height={64} className="h-16 w-auto object-contain object-left scale-[1.3] origin-left" />
           </div>
         </header>
         <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-10">
@@ -75,9 +75,9 @@ export default function BountiesPage() {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* ─── Top Nav ──────────────────────────────────────────── */}
-      <header className="border-b border-gray-100 px-8 h-20 grid grid-cols-3 items-center sticky top-0 bg-white/90 backdrop-blur-sm z-30">
+      <header className="border-b border-gray-100 px-8 h-16 grid grid-cols-3 items-center sticky top-0 bg-white/90 backdrop-blur-sm z-30">
         <div className="flex items-center gap-2 cursor-pointer -ml-2" onClick={() => router.push('/')}>
-          <Image src="/images/DbLogo.png" alt="DealVault" width={240} height={96} className="h-20 w-auto object-contain object-left hover:opacity-80 transition-opacity" />
+          <Image src="/images/DbLogo.png" alt="DealVault" width={160} height={64} className="h-16 w-auto object-contain object-left scale-[1.3] origin-left hover:opacity-80 transition-opacity" />
         </div>
 
         {/* Nav Links */}
@@ -90,7 +90,7 @@ export default function BountiesPage() {
             <button
               key={label}
               onClick={() => router.push(href)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
                 active
                   ? 'bg-black text-white shadow-sm'
                   : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'

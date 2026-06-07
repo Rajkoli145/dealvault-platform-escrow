@@ -21,7 +21,7 @@ export type DemoApplication = DemoBounty & {
   completedAt?: string;
 };
 
-export const DEMO_APPLICATIONS_KEY = 'dv_demo_applications';
+export const DEMO_APPLICATIONS_KEY = 'dv_demo_applications_v2';
 export const DEMO_WALLET_KEY = 'dv_demo_wallet';
 
 export const demoBounties: DemoBounty[] = [
