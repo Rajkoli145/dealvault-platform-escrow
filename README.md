@@ -1,136 +1,194 @@
 <div align="center">
-<img width="1774" height="887" alt="READMEDEALVAULT" src="https://github.com/user-attachments/assets/b92d8e95-8578-4ef5-8aee-612f15f7ec21" />
-  <br/>
-  <br />
-  
+  <img width="1774" height="887" alt="DealVault" src="https://github.com/user-attachments/assets/b92d8e95-8578-4ef5-8aee-612f15f7ec21" />
+
   <h1>DealVault</h1>
-  <p><b>The Open Escrow Standard for Stellar.</b></p>
-  
+
   <p>
-    Fund bounties in USDC, contributors get paid automatically by Soroban smart contracts.
+    <strong>Escrow Infrastructure for Open Source Bounties, Freelance Contracts, and Global Payments on Stellar.</strong>
   </p>
 
   <p>
-    <a href="https://github.com/your-org/dealvault-platform-escrow/actions"><img src="https://img.shields.io/github/actions/workflow/status/your-org/dealvault-platform-escrow/test.yml?branch=main&label=Build&style=flat-square&color=2ea44f" alt="Build Status" /></a>
-    <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License: MIT" /></a>
-    <a href="https://discord.gg/yourdiscord"><img src="https://img.shields.io/discord/1234567890?color=5865F2&label=Discord&logo=discord&logoColor=white&style=flat-square" alt="Discord" /></a>
+    Lock funds before work begins. Release payments automatically through Soroban smart contracts.
+  </p>
+
+  <p>
+    <a href="https://opensource.org/licenses/MIT">
+      <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License" />
+    </a>
   </p>
 </div>
 
-<br />
+---
 
-## 🌟 Why DealVault?
+## Overview
 
-Freelancers and open-source contributors shouldn't have to trust clients to pay net-30. With DealVault, project owners lock **USDC** directly into a **Soroban Smart Contract** on the Stellar network before work begins. 
+DealVault is a decentralized escrow platform built on Stellar and Soroban.
 
-Once the work is approved, the funds are instantly released. **Zero trust required. 100% on-chain.**
+Project owners can lock funds before work begins, ensuring contributors, freelancers, and contractors have guaranteed payment once agreed conditions are met.
 
-- **🛡️ KYC Verified** – Trust but verify all parties involved.
-- **⚡ Instant Settlement** – No wire transfers, no 3-day wait times.
-- **🌍 180+ Countries** – Global by default.
-- **⛓️ 100% On-Chain** – Fully auditable smart contracts.
+By moving escrow on-chain, DealVault removes the need to trust intermediaries while providing transparent and auditable settlement.
 
 ---
 
-## 🛠️ Compatible Stack
+## Why DealVault?
 
-Works effortlessly with your favorite tools and networks:
+Traditional freelance and bounty payments rely on trust.
 
-| Wallets | Assets | Frameworks |
-| :--- | :--- | :--- |
-| **Freighter** | **USDC** | **React** |
-| **Lobstr** | **XLM** | **Node.js** |
-| **xBull** | **USDT** | **Express** |
-| **Solar** | **Any Stellar Asset** | **MongoDB** |
-| **Any Stellar Wallet** | | **Soroban** |
+* Clients may disappear after work is completed.
+* Contributors often wait days or weeks to receive payment.
+* Cross-border transfers are slow and expensive.
+* Centralized platforms act as custodians and charge significant fees.
+
+DealVault solves this by locking funds in a Soroban smart contract before work starts.
+
+Once work is approved, payment is released automatically according to the escrow agreement.
+
+### Key Benefits
+
+* Escrow-backed payments
+* Instant settlement
+* Global accessibility
+* Transparent on-chain transactions
+* Support for Stellar assets including USDC and XLM
+* Built-in dispute workflows
 
 ---
 
-## 🚀 Getting Started
+## Use Cases
+
+### Open Source Bounties
+
+Fund GitHub issues and pay contributors through escrow-backed rewards.
+
+### Freelance Contracts
+
+Protect both clients and freelancers with milestone-based payments.
+
+### Service Agreements
+
+Manage contractor and agency payments without relying on intermediaries.
+
+### Marketplace Transactions
+
+Secure transactions between buyers and sellers using programmable escrow.
+
+---
+
+## Technology Stack
+
+| Layer           | Technology                |
+| --------------- | ------------------------- |
+| Frontend        | React, TypeScript, Vite   |
+| Backend         | Node.js, Express          |
+| Database        | MongoDB                   |
+| Smart Contracts | Soroban (Rust)            |
+| Network         | Stellar                   |
+| Assets          | USDC, XLM, Stellar Assets |
+
+---
+
+## Getting Started
 
 ### Prerequisites
-- Node.js ≥ 20
-- MongoDB (local or Atlas)
-- Docker (optional for full-stack deployment)
 
-### Local Development
+* Node.js ≥ 20
+* MongoDB
+* Docker (optional)
 
-1. **Start the Backend**
-   ```bash
-   cd backend
-   cp .env.example .env    # Edit with your JWT secrets and DB URI
-   npm install
-   npm run dev             # Server running on http://localhost:5000
-   ```
+### Backend
 
-2. **Start the Frontend**
-   ```bash
-   cd frontend
-   npm install
-   npm run dev             # Vite dev server on http://localhost:5174
-   ```
+```bash
+cd backend
 
-### Docker (Full Stack)
+cp .env.example .env
 
-Spin up the entire application (Frontend, Backend, and MongoDB) with a single command:
+npm install
+npm run dev
+```
+
+Server runs on:
+
+```text
+http://localhost:5000
+```
+
+### Frontend
+
+```bash
+cd frontend
+
+npm install
+npm run dev
+```
+
+Frontend runs on:
+
+```text
+http://localhost:5174
+```
+
+### Docker
+
 ```bash
 cd docker
+
 docker compose up --build
 ```
 
 ---
 
-## 🏗️ Project Architecture
+## Project Structure
 
-```plaintext
+```text
 dealvault-platform-escrow/
-├── backend/                    # Node.js + Express REST API
-│   ├── controllers/            # Route business logic
-│   ├── models/                 # Mongoose schemas
-│   ├── routes/                 # API endpoints
-│   └── tests/                  # Jest integration tests
+├── backend/
+│   ├── controllers/
+│   ├── models/
+│   ├── routes/
+│   └── tests/
 │
-├── frontend/                   # React + TypeScript + Vite UI
-│   ├── src/
-│   │   ├── components/         # Reusable UI elements
-│   │   ├── images/             # Static assets
-│   │   └── App.tsx             # Main application view
+├── frontend/
+│   └── src/
+│       ├── components/
+│       ├── images/
+│       └── App.tsx
 │
 ├── contracts/
-│   └── soroban/                # Rust on-chain escrow program (Stellar)
+│   └── soroban/
 │
-└── docker/                     # Dockerfiles & docker-compose.yml
+└── docker/
 ```
 
 ---
 
-## 🔗 Smart Contract (Soroban)
+## Smart Contract
 
-The on-chain escrow program handles trustless fund locking on the Stellar network.
+Core escrow operations:
+
+* `init_escrow` — Lock funds into escrow
+* `release` — Release funds to the recipient
+* `refund` — Return funds to the sender
+* `dispute` — Escalate an escrow for arbitration
+
+Deploy:
 
 ```bash
-# Deploy the contract
-$ stellar contract deploy --wasm escrow.wasm
+stellar contract deploy --wasm escrow.wasm
 ```
-
-**Core Instructions:**
-- `init_escrow` — Lock buyer funds in the contract.
-- `release` — Transfer funds securely to the seller.
-- `refund` — Return funds to the buyer if conditions aren't met.
-- `dispute` — Flag for decentralized arbitration.
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ```bash
 cd backend
-npm test                  # Run all integration tests
-npm run test:coverage     # Generate coverage report
+
+npm test
+npm run test:coverage
 ```
 
 ---
 
-## 📄 License
+## License
 
 MIT © DealVault Contributors
