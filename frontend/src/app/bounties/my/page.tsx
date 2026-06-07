@@ -158,24 +158,7 @@ export default function MyApplicationsPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-2">
-                        {application.status === 'applied' && (
-                          <button
-                            onClick={() => updateStatus(application.id, 'selected')}
-                            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-100"
-                          >
-                            <BadgeCheck className="h-4 w-4" />
-                            Mark selected
-                          </button>
-                        )}
-                        {application.status === 'selected' && (
-                          <button
-                            onClick={() => updateStatus(application.id, 'completed')}
-                            className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800"
-                          >
-                            <Check className="h-4 w-4" />
-                            Mark completed
-                          </button>
-                        )}
+                        {/* Maintainer actions like 'Mark selected' and 'Mark completed' have been removed from the contributor view */}
                         {(application.status === 'completed' || application.status === 'paid') && (
                           <button
                             onClick={() => router.push('/financial')}
@@ -185,7 +168,7 @@ export default function MyApplicationsPage() {
                             View reward
                           </button>
                         )}
-                        {application.status !== 'completed' && application.status !== 'paid' && (
+                        {application.status === 'selected' && (
                           <div className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-600">
                             <Clock className="h-4 w-4" />
                             Financial pending

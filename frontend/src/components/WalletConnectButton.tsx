@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Zap, CheckCircle, RefreshCw } from 'lucide-react';
+import { CheckCircle, RefreshCw } from 'lucide-react';
 
 interface WalletConnectButtonProps {
   connectedAddress: string | null;
@@ -42,7 +42,7 @@ export const WalletConnectButton: React.FC<WalletConnectButtonProps> = ({
     <button
       onClick={onConnect}
       disabled={isConnecting}
-      className="relative overflow-hidden group bg-black hover:bg-gray-800 disabled:bg-gray-400 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-md"
+      className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium whitespace-nowrap bg-white disabled:opacity-50"
     >
       {isConnecting ? (
         <>
@@ -50,12 +50,8 @@ export const WalletConnectButton: React.FC<WalletConnectButtonProps> = ({
           <span>Connecting...</span>
         </>
       ) : (
-        <>
-          <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
-          <span>Connect Wallet</span>
-        </>
+        <span>Connect Wallet</span>
       )}
-      <div className="absolute inset-0 w-1/2 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent animate-shimmer" />
     </button>
   );
 };

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { ChevronDown, Briefcase, GitBranch, LogOut, User, Wallet } from 'lucide-react';
+import { ChevronDown, Briefcase, GitBranch, LogOut, User, Wallet, Lock, HelpCircle, Clock, Newspaper, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -32,10 +32,10 @@ export default function AppNavBar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-100">
-      <div className="max-w-7xl mx-auto px-8 h-20 grid grid-cols-3 items-center">
+      <div className="max-w-7xl mx-auto px-8 h-16 grid grid-cols-3 items-center">
         {/* LEFT — Logo */}
         <div className="flex items-center gap-2 -ml-2 cursor-pointer" onClick={() => router.push('/')}>
-          <Image src="/images/DbLogo.png" alt="DealVault" width={240} height={96} className="h-20 w-auto object-contain object-left hover:opacity-80 transition-opacity" />
+          <Image src="/images/DbLogo.png" alt="DealVault" width={160} height={64} className="h-16 w-auto object-contain object-left scale-[1.3] origin-left hover:opacity-80 transition-opacity" />
         </div>
 
         {/* CENTER — Nav items */}
@@ -44,7 +44,7 @@ export default function AppNavBar() {
             <button
               key={item.id}
               onClick={() => router.push(item.href)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
                 pathname === item.href
                   ? 'bg-black text-white shadow-sm'
                   : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
@@ -61,7 +61,7 @@ export default function AppNavBar() {
           <div className="relative">
           <button
             onClick={() => setProfileOpen(!profileOpen)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:border-gray-400 transition-colors"
+            className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
           >
             {avatarSrc ? (
               <Image
@@ -69,7 +69,7 @@ export default function AppNavBar() {
                 alt={user?.name || 'User'}
                 width={32}
                 height={32}
-                className="rounded-full"
+                className="rounded-full ring-2 ring-gray-200 hover:ring-gray-300 transition-all"
                 unoptimized
               />
             ) : (
@@ -77,55 +77,92 @@ export default function AppNavBar() {
                 {user?.name?.[0]?.toUpperCase() || 'U'}
               </div>
             )}
-            <span className="text-sm font-medium text-gray-900">{user?.name?.split(' ')[0] || 'User'}</span>
+            <span className="hidden lg:block">{user?.name?.split(' ')[0] || 'User'}</span>
             <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {/* Dropdown Menu */}
           {profileOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+            <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-fade-in">
+              {/* Profile Section */}
               <div className="p-4 border-b border-gray-100">
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-3">
                   {avatarSrc ? (
                     <Image
                       src={avatarSrc}
                       alt={user?.name || 'User'}
-                      width={40}
-                      height={40}
-                      className="rounded-full"
+                      width={48}
+                      height={48}
+                      className="rounded-full ring-2 ring-gray-200"
                       unoptimized
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-sm text-white font-bold">
+                    <div className="w-12 h-12 rounded-full bg-black flex items-center justify-center text-sm text-white font-bold">
                       {user?.name?.[0]?.toUpperCase() || 'U'}
                     </div>
                   )}
-                  <div>
-                    <p className="font-semibold text-gray-900 text-sm">{user?.name}</p>
-                    <p className="text-xs text-gray-500">@{user?.githubUsername}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 truncate">{user?.name}</p>
+                    <p className="text-xs text-gray-500 truncate">@{user?.githubUsername || user?.email}</p>
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    router.push('/profile');
-                    setProfileOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  onClick={() => { router.push('/profile'); setProfileOpen(false); }}
+                  className="mt-3 w-full flex items-center justify-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 py-2 rounded-lg transition-colors"
                 >
                   <User className="w-4 h-4" />
                   View Profile
                 </button>
               </div>
-              <button
-                onClick={() => {
-                  logout();
-                  setProfileOpen(false);
-                }}
-                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors border-t border-gray-100"
-              >
-                <LogOut className="w-4 h-4" />
-                Logout
-              </button>
+
+              {/* Maintainer App */}
+              <div className="p-2 border-b border-gray-100">
+                <button
+                  onClick={() => { router.push('/dashboard'); setProfileOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <Lock className="w-4 h-4 text-gray-500" />
+                  <span>Maintainer App</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-gray-400 ml-auto" />
+                </button>
+              </div>
+
+              {/* Resources Section */}
+              <div className="p-2 border-b border-gray-100">
+                <p className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Resources</p>
+                <button
+                  onClick={() => { setProfileOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <HelpCircle className="w-4 h-4 text-gray-500" />
+                  <span>FAQ</span>
+                </button>
+                <button
+                  onClick={() => { setProfileOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <Clock className="w-4 h-4 text-gray-500" />
+                  <span>Coming Soon</span>
+                </button>
+                <button
+                  onClick={() => { setProfileOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <Newspaper className="w-4 h-4 text-gray-500" />
+                  <span>News</span>
+                </button>
+              </div>
+
+              {/* Account Section */}
+              <div className="p-2">
+                <button
+                  onClick={() => { logout(); router.push('/'); setProfileOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
             </div>
           )}
           </div>
