@@ -1,6 +1,5 @@
 <div align="center">
-  <img width="1774" height="887" alt="DealVault" src="https://github.com/user-attachments/assets/b92d8e95-8578-4ef5-8aee-612f15f7ec21" />
-
+<img width="2103" height="748" alt="Dlogo" src="https://github.com/user-attachments/assets/305aed40-06d5-4166-8346-6d0a815240aa" />
   <h1>DealVault</h1>
 
   <p>
