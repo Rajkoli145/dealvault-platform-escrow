@@ -148,7 +148,7 @@ export default function NavBar({ connectedAddress, isConnecting, onConnect, onDi
                     {/* Maintainer App */}
                     <div className="p-2 border-b border-gray-100">
                       <button
-                        onClick={() => { router.push('/dashboard'); setProfileOpen(false); }}
+                        onClick={() => { router.push('/maintainer-apply'); setProfileOpen(false); }}
                         className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                       >
                         <Lock className="w-4 h-4 text-gray-500" />

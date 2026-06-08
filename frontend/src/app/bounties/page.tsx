@@ -161,7 +161,7 @@ export default function BountiesPage() {
                   </button>
                 </div>
 
-                {/* Maintainer App */}
+                {/* Account Links */}
                 <div className="p-2 border-b border-gray-100">
                   <button
                     onClick={() => { router.push('/financial'); setProfileOpen(false); }}
@@ -169,6 +169,14 @@ export default function BountiesPage() {
                   >
                     <Wallet className="w-4 h-4 text-gray-500" />
                     <span>Financial</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-400 ml-auto" />
+                  </button>
+                  <button
+                    onClick={() => { router.push('/maintainer-apply'); setProfileOpen(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <LayoutDashboard className="w-4 h-4 text-gray-500" />
+                    <span>Maintainer App</span>
                     <ExternalLink className="w-3.5 h-3.5 text-gray-400 ml-auto" />
                   </button>
                 </div>

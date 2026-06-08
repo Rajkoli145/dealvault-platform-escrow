@@ -27,6 +27,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!isLoading && !user) router.replace('/');
     else if (!isLoading && user && user.role === 'buyer') router.replace('/onboarding');
+    else if (!isLoading && user && user.role === 'maintainer') router.replace('/maintainer-apply');
   }, [user, isLoading, router]);
 
   // Pre-fill fields from user object
@@ -93,7 +94,13 @@ export default function DashboardPage() {
       });
       if (res.ok) {
         loginWithToken(token);
-        router.replace('/dashboard');
+        // Maintainer → go to the maintainer application flow
+        // Contributor → go to the bounties explorer
+        if (newRole === 'maintainer') {
+          router.replace('/maintainer-apply');
+        } else {
+          router.replace('/bounties');
+        }
       }
     } catch (err) {
       console.error(err);

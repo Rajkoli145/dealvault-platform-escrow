@@ -7,7 +7,7 @@ import AppNavBar from '../../components/AppNavBar';
 import Footer from '../../components/Footer';
 import { SkeletonProfile } from '../../components/SkeletonLoader';
 import {
-  Wallet, Shield, Calendar, Mail, Github, ExternalLink,
+  Wallet, Calendar, Mail, Github, ExternalLink,
   CheckCircle2, XCircle, Loader2, Copy, User as UserIcon, Eye, Users,
   ChevronDown, Bell, Check, AlertCircle, Info, Plus, X, Star, DollarSign,
   Clock, TrendingUp, Award, MapPin, Link2, Briefcase, Tag
@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const [walletAddress, setWalletAddress] = useState('');
   const [isConnectingWallet, setIsConnectingWallet] = useState(false);
   const [walletConnected, setWalletConnected] = useState(false);
+  const [walletError, setWalletError] = useState('');
   const [kycVerified, setKycVerified] = useState(false);
   const [kycStatus, setKycStatus] = useState<'not_started' | 'pending' | 'verified' | 'rejected'>('not_started');
   const [copySuccess, setCopySuccess] = useState(false);
@@ -41,28 +42,87 @@ export default function ProfilePage() {
   }, [user, isLoading, router]);
 
   useEffect(() => {
-    const savedWallet = readDemoWallet();
-    if (savedWallet) {
-      setWalletAddress(savedWallet);
+    if (user?.walletAddress) {
+      setWalletAddress(user.walletAddress.toUpperCase());
       setWalletConnected(true);
+    } else {
+      const savedWallet = readDemoWallet();
+      if (savedWallet) {
+        setWalletAddress(savedWallet.toUpperCase());
+        setWalletConnected(true);
+      } else {
+        setWalletAddress('');
+        setWalletConnected(false);
+      }
     }
-  }, []);
+  }, [user?.walletAddress]);
 
   const handleConnectWallet = async () => {
+    const address = walletAddress.trim();
+    if (!address) {
+      setWalletError('Please enter a Stellar wallet address.');
+      return;
+    }
+    if (!/^G[A-Z2-7]{55}$/.test(address.toUpperCase())) {
+      setWalletError('Invalid Stellar address. Must start with G and be 56 characters long.');
+      return;
+    }
+    
+    setWalletError('');
     setIsConnectingWallet(true);
-    setTimeout(() => {
-      const nextWalletAddress = 'GDS7...82KQ';
-      setWalletAddress(nextWalletAddress);
-      writeDemoWallet(nextWalletAddress);
-      setWalletConnected(true);
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/auth/wallet`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ walletAddress: address.toUpperCase() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        writeDemoWallet(address.toUpperCase());
+        setWalletAddress(address.toUpperCase());
+        setWalletConnected(true);
+        if (token) {
+          loginWithToken(token);
+        }
+      } else {
+        setWalletError(data.message || 'Failed to link wallet.');
+      }
+    } catch (err) {
+      setWalletError('Server connection error. Failed to link wallet.');
+    } finally {
       setIsConnectingWallet(false);
-    }, 1500);
+    }
   };
 
-  const handleDisconnectWallet = () => {
-    setWalletAddress('');
-    writeDemoWallet('');
-    setWalletConnected(false);
+  const handleDisconnectWallet = async () => {
+    setWalletError('');
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/auth/wallet`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ walletAddress: '' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setWalletAddress('');
+        writeDemoWallet('');
+        setWalletConnected(false);
+        if (token) {
+          loginWithToken(token);
+        }
+      } else {
+        setWalletError(data.message || 'Failed to unlink wallet.');
+      }
+    } catch (err) {
+      setWalletError('Server connection error. Failed to unlink wallet.');
+    }
   };
 
   const handleCopyAddress = () => {
@@ -176,10 +236,12 @@ export default function ProfilePage() {
 
             {/* Right: Stats & Action */}
             <div className="flex flex-col items-end gap-6">
-              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors text-sm font-semibold text-gray-900">
-                <Eye className="w-4 h-4" />
-                Public profile
-              </button>
+              <div className="flex flex-col items-end gap-2">
+                <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors text-sm font-semibold text-gray-900">
+                  <Eye className="w-4 h-4" />
+                  Public profile
+                </button>
+              </div>
               
               <div className="text-right space-y-3">
                 <div className="flex items-center justify-end gap-6 text-sm">
@@ -308,17 +370,25 @@ export default function ProfilePage() {
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
               />
-              {!walletConnected && (
-                <button
-                  onClick={handleConnectWallet}
-                  disabled={isConnectingWallet}
-                  className="relative overflow-hidden px-5 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded hover:bg-gray-800 transition-colors whitespace-nowrap flex items-center gap-2"
-                >
-                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-shimmer" />
-                  <span className="relative z-10">{isConnectingWallet ? 'Adding...' : 'Add wallet'}</span>
-                </button>
-              )}
+              <button
+                onClick={handleConnectWallet}
+                disabled={isConnectingWallet}
+                className="relative overflow-hidden px-5 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded hover:bg-gray-800 transition-colors whitespace-nowrap flex items-center gap-2"
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-shimmer" />
+                <span className="relative z-10">
+                  {isConnectingWallet 
+                    ? (walletConnected ? 'Updating...' : 'Adding...') 
+                    : (walletConnected ? 'Update wallet' : 'Add wallet')}
+                </span>
+              </button>
             </div>
+            {walletError && (
+              <div className="text-red-500 text-xs font-semibold mt-[-8px] mb-4 flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5" />
+                {walletError}
+              </div>
+            )}
 
             {!walletConnected ? (
               <div className="text-center py-8 px-4 border border-dashed border-gray-300 rounded bg-gray-50">
