@@ -4,9 +4,9 @@ import Image from 'next/image';
 export default function Footer() {
   const links = {
     Platform: ['How it works', 'Browse bounties', 'Post a bounty', 'Escrow system'],
-    Security: ['KYC verification', 'Dispute resolution', 'Audit logs', 'Privacy policy'],
+    Security: ['KYC verification', 'Dispute resolution', 'Audit logs', { text: 'Privacy policy', href: '/docs' }],
     Company: ['About', 'Blog', 'Careers', 'Contact'],
-    Developers: ['Documentation', 'API reference', 'Stellar integration', 'Status'],
+    Developers: [{ text: 'Documentation', href: '/docs' }, 'API reference', 'Stellar integration', 'Status'],
   };
 
   return (
@@ -26,11 +26,16 @@ export default function Footer() {
             <div key={section}>
               <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4">{section}</h4>
               <ul className="space-y-3">
-                {items.map((item) => (
-                  <li key={item}>
-                    <a href="#" className="text-sm text-gray-400 hover:text-gray-900 transition-colors">{item}</a>
-                  </li>
-                ))}
+                {items.map((item, index) => {
+                  const isLink = typeof item === 'object';
+                  const text = isLink ? item.text : item;
+                  const href = isLink ? item.href : '#';
+                  return (
+                    <li key={index}>
+                      <a href={href} className="text-sm text-gray-400 hover:text-gray-900 transition-colors">{text}</a>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}

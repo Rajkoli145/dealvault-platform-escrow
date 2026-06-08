@@ -59,8 +59,8 @@ exports.validateLogin = [
 
 exports.validateLinkWallet = [
   body('walletAddress')
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty().withMessage('Wallet address is required')
     .matches(/^G[A-Z2-7]{55}$/).withMessage('Invalid Stellar public key format'),
 
   handleValidationErrors,

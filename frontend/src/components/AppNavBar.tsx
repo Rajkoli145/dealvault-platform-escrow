@@ -6,7 +6,11 @@ import { ChevronDown, Briefcase, GitBranch, LogOut, User, Wallet, Lock, HelpCirc
 import { useAuth } from '../context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
 
-export default function AppNavBar() {
+interface AppNavBarProps {
+  showNavItems?: boolean;
+}
+
+export default function AppNavBar({ showNavItems = true }: AppNavBarProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -38,22 +42,22 @@ export default function AppNavBar() {
           <Image src="/images/DbLogo.png" alt="DealVault" width={160} height={64} className="h-16 w-auto object-contain object-left scale-[1.3] origin-left hover:opacity-80 transition-opacity" />
         </div>
 
-        {/* CENTER — Nav items */}
         <div className="flex items-center justify-center gap-1">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => router.push(item.href)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
-                pathname === item.href
-                  ? 'bg-black text-white shadow-sm'
-                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <item.icon className="w-4 h-4" />
-              {item.label}
-            </button>
-          ))}
+          {showNavItems &&
+            navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => router.push(item.href)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
+                  pathname === item.href
+                    ? 'bg-black text-white shadow-sm'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <item.icon className="w-4 h-4" />
+                {item.label}
+              </button>
+            ))}
         </div>
 
         {/* RIGHT — Profile dropdown */}
@@ -118,11 +122,19 @@ export default function AppNavBar() {
               {/* Maintainer App */}
               <div className="p-2 border-b border-gray-100">
                 <button
-                  onClick={() => { router.push('/dashboard'); setProfileOpen(false); }}
+                  onClick={() => { router.push('/maintainer-apply'); setProfileOpen(false); }}
                   className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                 >
                   <Lock className="w-4 h-4 text-gray-500" />
                   <span>Maintainer App</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-gray-400 ml-auto" />
+                </button>
+                <button
+                  onClick={() => { router.push('/bounties'); setProfileOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <GitBranch className="w-4 h-4 text-gray-500" />
+                  <span>Contributor App</span>
                   <ExternalLink className="w-3.5 h-3.5 text-gray-400 ml-auto" />
                 </button>
               </div>

@@ -334,7 +334,11 @@ exports.linkWallet = async (req, res, next) => {
       return next(new AppError('User not found.', 404));
     }
 
-    user.walletAddress = walletAddress;
+    if (!walletAddress || walletAddress.trim() === '') {
+      user.walletAddress = undefined;
+    } else {
+      user.walletAddress = walletAddress.toLowerCase().trim();
+    }
     await user.save();
 
     res.status(200).json({

@@ -17,6 +17,7 @@ export interface AuthUser {
   linkedinUrl: string | null;
   twitterUrl: string | null;
   portfolioUrl: string | null;
+  walletAddress?: string | null;
   createdAt?: string;
   followers?: number;
   following?: number;
