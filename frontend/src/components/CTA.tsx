@@ -1,16 +1,38 @@
 "use client";
 import { useInView } from '../hooks/useInView';
+import Lightfall from './Lightfall';
 
 export default function CTA() {
   const { ref, inView } = useInView();
 
   return (
     <section className="relative py-24 px-6 border-t border-gray-200 bg-black overflow-hidden">
-      {/* Shimmer sweep */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="animate-shimmer absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+      {/* Lightfall background */}
+      <div className="absolute inset-0 z-0">
+        <Lightfall
+          colors={['#A6C8FF', '#5227FF', '#FF9FFC']}
+          backgroundColor="#000000"
+          speed={0.5}
+          streakCount={2}
+          streakWidth={1}
+          streakLength={1}
+          glow={1}
+          density={0.6}
+          twinkle={1}
+          zoom={2.9}
+          backgroundGlow={0.5}
+          opacity={1}
+          mouseInteraction={false}
+          mouseStrength={0.5}
+          mouseRadius={1}
+          color1="#ffffff"
+          color2="#cfcfcf"
+          color3="#dfdfdf"
+        />
       </div>
-      <div className="max-w-3xl mx-auto text-center">
+
+
+      <div className="max-w-3xl mx-auto text-center relative z-20">
         <div ref={ref} className={`transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">Get started</p>
           <h2 className="text-4xl md:text-5xl font-black mb-4 text-white">
