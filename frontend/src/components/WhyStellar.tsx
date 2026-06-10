@@ -20,7 +20,7 @@ export default function WhyStellar() {
             <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Infrastructure</p>
             <h2 className="text-4xl md:text-5xl font-black mb-4 text-black">Why Stellar?</h2>
             <p className="text-gray-500 text-lg max-w-xl mx-auto">
-              The world's most contributor-friendly payment network. Fast, cheap, and globally accessible.
+              The world&apos;s most contributor-friendly payment network. Fast, cheap, and globally accessible.
             </p>
           </div>
 

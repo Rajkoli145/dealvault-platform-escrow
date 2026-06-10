@@ -29,7 +29,7 @@ export default function Security() {
               </p>
               <blockquote className="border-l-4 border-black pl-5 py-1">
                 <p className="text-gray-700 italic text-sm leading-relaxed">
-                  "Trust should not be a requirement for collaboration. Verification should."
+                  &quot;Trust should not be a requirement for collaboration. Verification should.&quot;
                 </p>
               </blockquote>
             </div>
