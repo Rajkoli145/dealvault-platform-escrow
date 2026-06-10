@@ -666,7 +666,7 @@ export default function MaintainerApplyPage() {
               <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">Application Under Review</h1>
               <p className="text-gray-400 text-base mb-12 leading-relaxed max-w-lg mx-auto">
                 Your submission has been received. Our maintainer review team is evaluating your repository against
-                DealVault's participation criteria.
+                DealVault&apos;s participation criteria.
               </p>
 
               {/* Status card */}

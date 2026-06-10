@@ -69,7 +69,7 @@ export default function Testimonials() {
             Loved by contributors worldwide.
           </h2>
           <p className={`text-center text-gray-400 text-sm mb-14 transition-all duration-500 ${inView ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '100ms' }}>
-            Don't take our word for it — here's what builders are saying.
+            Don&apos;t take our word for it — here&apos;s what builders are saying.
           </p>
 
           <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
