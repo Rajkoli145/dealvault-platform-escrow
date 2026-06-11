@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { Github, Menu, X, LogOut, Lock, ChevronDown, User, HelpCircle, Clock, Newspaper, ExternalLink } from 'lucide-react';
+import { Github, BookOpen, Menu, X, LogOut, Lock, ChevronDown, User, HelpCircle, Clock, Newspaper, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { WalletConnectButton } from './WalletConnectButton';
@@ -58,8 +58,8 @@ export default function NavBar({ connectedAddress, isConnecting, onConnect, onDi
 
         {/* CENTER — Nav links */}
         <div className="hidden md:flex items-center justify-center gap-0.5">
-          {['Platform', 'Security', 'How It Works', 'Why Stellar'].map((item) => (
-            <a key={item} href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
+          {['Platform', 'Security', 'Docs', 'Why Stellar'].map((item) => (
+            <a key={item} href={item === 'Docs' ? '/docs' : `#${item.toLowerCase().replace(/\s+/g, '-')}`}
               className="text-sm text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors font-medium whitespace-nowrap">
               {item}
             </a>
@@ -201,13 +201,6 @@ export default function NavBar({ connectedAddress, isConnecting, onConnect, onDi
             /* ── Logged-out state ── */
             <>
               <button
-                onClick={handleGetStarted}
-                className="hidden md:flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium whitespace-nowrap"
-              >
-                <Github className="w-4 h-4" />
-                GitHub
-              </button>
-              <button
                 id="get-started-btn"
                 onClick={handleGetStarted}
                 className="relative overflow-hidden group bg-black hover:bg-gray-800 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors whitespace-nowrap"
@@ -229,8 +222,8 @@ export default function NavBar({ connectedAddress, isConnecting, onConnect, onDi
       {/* Mobile drawer */}
       {mobileOpen && (
         <div className="md:hidden bg-white border-b border-gray-200 px-6 pb-6">
-          {['Platform', 'Security', 'How It Works', 'Why Stellar'].map((item) => (
-            <a key={item} href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
+          {['Platform', 'Security', 'Docs', 'Why Stellar'].map((item) => (
+            <a key={item} href={item === 'Docs' ? '/docs' : `#${item.toLowerCase().replace(/\s+/g, '-')}`}
               className="block py-3 text-gray-600 hover:text-gray-900 border-b border-gray-100 text-sm font-medium"
               onClick={() => setMobileOpen(false)}>
               {item}
@@ -253,7 +246,6 @@ export default function NavBar({ connectedAddress, isConnecting, onConnect, onDi
                 </>
               ) : (
                 <>
-                  <button onClick={handleGetStarted} className="flex-1 text-sm border border-gray-200 rounded-lg py-2 text-gray-700 font-medium text-center">GitHub</button>
                   <button onClick={handleGetStarted} className="flex-1 text-sm bg-black text-white rounded-lg py-2 font-medium">Get started</button>
                 </>
               )}

@@ -18,12 +18,12 @@ export default function ForWho() {
     <section className="py-24 px-6 bg-gray-50 border-t border-gray-200">
       <div className="max-w-6xl mx-auto">
         <div ref={ref} className={`text-center mb-14 transition-all duration-500 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Who It's For</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Who It&apos;s For</p>
           <h2 className="text-4xl md:text-5xl font-black mb-4 text-black">
             For every kind of contributor.
           </h2>
           <p className="text-gray-500 text-lg max-w-xl mx-auto">
-            Whether you're fixing a bug or building an entire product, DealVault ensures your time is never spent on unfunded work.
+            Whether you&apos;re fixing a bug or building an entire product, DealVault ensures your time is never spent on unfunded work.
           </p>
         </div>
 

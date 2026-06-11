@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { ChevronDown, Briefcase, GitBranch, LogOut, User, Wallet, Lock, HelpCircle, Clock, Newspaper, ExternalLink } from 'lucide-react';
+import { ChevronDown, Briefcase, GitBranch, LogOut, User, Wallet, Lock, HelpCircle, Clock, Newspaper, ExternalLink, BookOpen } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -143,25 +143,18 @@ export default function AppNavBar({ showNavItems = true }: AppNavBarProps) {
               <div className="p-2 border-b border-gray-100">
                 <p className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Resources</p>
                 <button
+                  onClick={() => { router.push('/docs'); setProfileOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <BookOpen className="w-4 h-4 text-gray-500" />
+                  <span>Documentation</span>
+                </button>
+                <button
                   onClick={() => { setProfileOpen(false); }}
                   className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                 >
                   <HelpCircle className="w-4 h-4 text-gray-500" />
                   <span>FAQ</span>
-                </button>
-                <button
-                  onClick={() => { setProfileOpen(false); }}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  <Clock className="w-4 h-4 text-gray-500" />
-                  <span>Coming Soon</span>
-                </button>
-                <button
-                  onClick={() => { setProfileOpen(false); }}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  <Newspaper className="w-4 h-4 text-gray-500" />
-                  <span>News</span>
                 </button>
               </div>
 

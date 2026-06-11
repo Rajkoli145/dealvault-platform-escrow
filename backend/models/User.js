@@ -280,7 +280,8 @@ userSchema.virtual('displayName').get(function () {
 userSchema.pre('save', async function () {
   if (!this.isModified('password') || !this.password) return;
 
-  const salt = await bcrypt.genSalt(12);
+  const saltRounds = process.env.NODE_ENV === 'test' ? 4 : 12;
+  const salt = await bcrypt.genSalt(saltRounds);
   this.password = await bcrypt.hash(this.password, salt);
 
   // Track when password was changed (skip on first save)

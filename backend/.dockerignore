@@ -8,3 +8,6 @@ node_modules/
 coverage/
 uploads/
 .git/
+.gitignore
+npm-debug.log
+tests
