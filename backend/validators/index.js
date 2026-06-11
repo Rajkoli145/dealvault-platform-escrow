@@ -1,4 +1,5 @@
 const { body, param, query, validationResult } = require('express-validator');
+const { isValidEd25519PublicKey } = require('../utils/stellarStrKey');
 
 /**
  * Reusable middleware: runs after all validators and returns 400 if any failed.
@@ -61,7 +62,9 @@ exports.validateLinkWallet = [
   body('walletAddress')
     .optional({ checkFalsy: true })
     .trim()
-    .matches(/^G[A-Z2-7]{55}$/).withMessage('Invalid Stellar public key format'),
+    // SECURITY: Full StrKey checksum validation (not just charset regex) so malformed
+    // payout addresses are rejected at the edge.
+    .custom((v) => isValidEd25519PublicKey(v)).withMessage('Invalid Stellar public key'),
 
   handleValidationErrors,
 ];
@@ -106,7 +109,10 @@ exports.validateUpdateDealStatus = [
 
   body('status')
     .notEmpty().withMessage('Status is required')
-    .isIn(['ACCEPTED', 'FUNDED', 'IN_PROGRESS', 'SUBMITTED', 'APPROVED', 'RELEASED', 'CANCELLED'])
+    // REFUNDED added so the admin DISPUTED→REFUNDED transition is reachable (it was
+    // omitted, making the refund path 400 before the controller). DISPUTED is reached
+    // via its own POST /:id/dispute route, not here.
+    .isIn(['ACCEPTED', 'FUNDED', 'IN_PROGRESS', 'SUBMITTED', 'APPROVED', 'RELEASED', 'REFUNDED', 'CANCELLED'])
     .withMessage('Invalid status value'),
 
   handleValidationErrors,

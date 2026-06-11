@@ -209,3 +209,76 @@ describe('POST /api/webhooks/github', () => {
     expect(res.body.success).toBe(true);
   });
 });
+
+// ── Delivery Deduplication Tests ──────────────────────────────────────────────
+
+describe('Webhook delivery deduplication', () => {
+  const { _clearProcessedDeliveries } = require('../controllers/webhookController');
+
+  function sendWebhook(payload, deliveryId) {
+    const { body, sig } = signPayload(payload);
+    const req = request(app)
+      .post('/api/webhooks/github')
+      .set('Content-Type', 'application/json')
+      .set('X-GitHub-Event', 'issues')
+      .set('X-Hub-Signature-256', sig);
+    if (deliveryId) req.set('X-GitHub-Delivery', deliveryId);
+    return req.send(body);
+  }
+
+  beforeEach(() => {
+    process.env.GITHUB_WEBHOOK_SECRET = WEBHOOK_SECRET;
+    githubBot.verifyWebhookSignature.mockReturnValue(true);
+    _clearProcessedDeliveries();
+  });
+
+  it('should ignore a duplicate X-GitHub-Delivery with 200 and not process it twice', async () => {
+    const first = await sendWebhook(buildLabeledPayload({ issueNumber: 101 }), 'dup-uuid-1');
+    expect(first.status).toBe(200);
+
+    // Same delivery ID, different payload — must be dropped, not processed
+    const second = await sendWebhook(buildLabeledPayload({ issueNumber: 102 }), 'dup-uuid-1');
+    expect(second.status).toBe(200);
+    expect(second.body.message).toBe('Duplicate delivery ignored.');
+
+    const count = await Issue.countDocuments();
+    expect(count).toBe(1);
+    expect(await Issue.findOne({ githubIssueNumber: 101 })).not.toBeNull();
+    expect(await Issue.findOne({ githubIssueNumber: 102 })).toBeNull();
+  });
+
+  it('should process distinct delivery IDs independently', async () => {
+    await sendWebhook(buildLabeledPayload({ issueNumber: 201 }), 'uuid-a');
+    await sendWebhook(buildLabeledPayload({ issueNumber: 202 }), 'uuid-b');
+
+    expect(await Issue.countDocuments()).toBe(2);
+  });
+
+  it('should process requests without an X-GitHub-Delivery header normally', async () => {
+    await sendWebhook(buildLabeledPayload({ issueNumber: 301 }));
+    await sendWebhook(buildLabeledPayload({ issueNumber: 302 }));
+
+    // No header → no dedup possible → both processed
+    expect(await Issue.countDocuments()).toBe(2);
+  });
+
+  it('should re-process a delivery ID after its TTL expires', async () => {
+    const realNow = Date.now();
+    const nowSpy = jest.spyOn(Date, 'now');
+
+    try {
+      nowSpy.mockReturnValue(realNow);
+      await sendWebhook(buildLabeledPayload({ issueNumber: 401 }), 'ttl-uuid');
+
+      // Advance past the 10-minute TTL — the stale entry must be evicted
+      nowSpy.mockReturnValue(realNow + 11 * 60 * 1000);
+      const res = await sendWebhook(buildLabeledPayload({ issueNumber: 402 }), 'ttl-uuid');
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).not.toBe('Duplicate delivery ignored.');
+      expect(await Issue.countDocuments()).toBe(2);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+});

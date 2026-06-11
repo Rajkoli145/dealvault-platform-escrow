@@ -276,13 +276,13 @@ describe('PATCH /api/deals/:id/status', () => {
     await request(app)
       .post('/api/auth/wallet')
       .set('Authorization', `Bearer ${buyerToken}`)
-      .send({ walletAddress: 'GA5W247FEJSIBI2LNITA4DIP3ESP3BYCXU6IX4K67HK26LODH6H7G2G7' });
+      .send({ walletAddress: 'GCJYV6S6MBRUUK42UNFUC2Q2EKRKYBH57COCAAWMD4ZML73TBUAB6L74' });
 
     // 2. Link seller wallet
     await request(app)
       .post('/api/auth/wallet')
       .set('Authorization', `Bearer ${sellerToken}`)
-      .send({ walletAddress: 'GB2SIBIDLNITA4DIP3ESP3BYCXU6IX4K67HK26LODH6H7G2G7XXXXXXX' });
+      .send({ walletAddress: 'GBOGFPGF74EI72HAXM3ZVCYBB4SB4NOPQT677OGRMNUEV3O7ZRQQUIQD' });
 
     // 3. Seller accepts the deal
     await request(app)
@@ -305,13 +305,13 @@ describe('PATCH /api/deals/:id/status', () => {
     await request(app)
       .post('/api/auth/wallet')
       .set('Authorization', `Bearer ${buyerToken}`)
-      .send({ walletAddress: 'GA5W247FEJSIBI2LNITA4DIP3ESP3BYCXU6IX4K67HK26LODH6H7G2G7' });
+      .send({ walletAddress: 'GCJYV6S6MBRUUK42UNFUC2Q2EKRKYBH57COCAAWMD4ZML73TBUAB6L74' });
 
     // 2. Link seller wallet
     await request(app)
       .post('/api/auth/wallet')
       .set('Authorization', `Bearer ${sellerToken}`)
-      .send({ walletAddress: 'GB2SIBIDLNITA4DIP3ESP3BYCXU6IX4K67HK26LODH6H7G2G7XXXXXXX' });
+      .send({ walletAddress: 'GBOGFPGF74EI72HAXM3ZVCYBB4SB4NOPQT677OGRMNUEV3O7ZRQQUIQD' });
 
     // 3. Seller accepts the deal
     await request(app)

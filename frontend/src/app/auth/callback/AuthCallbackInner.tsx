@@ -1,42 +1,44 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function AuthCallbackInner() {
-  const { loginWithToken, user } = useAuth();
-  const router             = useRouter();
-  const searchParams       = useSearchParams();
-  useEffect(() => {
-    const token = searchParams.get('token');
+  // SECURITY: The JWT is delivered as an httpOnly cookie by the backend OAuth callback,
+  // NOT in the URL. We no longer read a ?token= param (which would leak via history,
+  // logs, and Referer). Instead we re-load the session from the cookie.
+  const { user, isLoading, refreshSession } = useAuth();
+  const router = useRouter();
 
-    if (!token) {
-      // No token — OAuth failed, go home
+  // On mount, establish the session from the cookie that GitHub's redirect set.
+  useEffect(() => {
+    refreshSession();
+  }, [refreshSession]);
+
+  // Redirect based on user role once the session resolves.
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (!user) {
+      // Cookie missing/invalid — OAuth failed or (in local dev) the cross-origin
+      // cookie wasn't sent. See AuthContext LOCAL DEV NOTE about same-origin proxy.
       router.replace('/?auth=error');
       return;
     }
 
-    // Store token + fetch /api/auth/me
-    loginWithToken(token);
-  }, [loginWithToken, router, searchParams]);
+    const timer = setTimeout(() => {
+      if (user.role === 'buyer') {
+        router.replace('/onboarding');
+      } else if (user.role === 'contributor') {
+        router.replace('/bounties');
+      } else {
+        router.replace('/dashboard');
+      }
+    }, 800);
 
-  // Redirect based on user role after user data is loaded
-  useEffect(() => {
-    if (user) {
-      const timer = setTimeout(() => {
-        if (user.role === 'buyer') {
-          router.replace('/onboarding');
-        } else if (user.role === 'contributor') {
-          router.replace('/bounties');
-        } else {
-          router.replace('/dashboard');
-        }
-      }, 800);
-
-      return () => clearTimeout(timer);
-    }
-  }, [user, router]);
+    return () => clearTimeout(timer);
+  }, [user, isLoading, router]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-6">

@@ -1,0 +1,10 @@
+# SECURITY: build context is backend/ (see docker/docker-compose.yml) —
+# keep secrets, deps and local artifacts out of the image context
+.env
+*.env
+.env.*
+!.env.example
+node_modules/
+coverage/
+uploads/
+.git/

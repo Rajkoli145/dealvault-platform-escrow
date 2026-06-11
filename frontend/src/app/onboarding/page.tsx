@@ -7,7 +7,7 @@ import { Check, Shield, Terminal, Users, Hexagon, Lock, BadgeCheck } from 'lucid
 import Image from 'next/image';
 
 export default function OnboardingPage() {
-  const { user, token, loginWithToken, isLoading } = useAuth();
+  const { user, token, refreshSession, isLoading } = useAuth();
   const router = useRouter();
   
   const [step, setStep] = useState<1 | 2>(1);
@@ -50,19 +50,23 @@ export default function OnboardingPage() {
   }
 
   const handleCompleteSetup = async () => {
-    if (!selectedRole || !token) return;
+    if (!selectedRole) return;
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/auth/role`, {
+      // NOTE: /auth/role was removed (self-service role escalation). This onboarding
+      // step is known-broken and will 404 until an admin-only role endpoint exists
+      // (see CLAUDE.md). credentials:'include' added for when a replacement lands.
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/role`, {
         method: 'PATCH',
+        credentials: 'include', // SECURITY: send httpOnly jwt cookie
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ role: selectedRole })
       });
       if (res.ok) {
-        loginWithToken(token);
+        refreshSession();
         // Contributors go to the bounties explorer; maintainers go to the dashboard
         router.replace(selectedRole === 'contributor' ? '/bounties' : '/dashboard');
       }

@@ -164,7 +164,8 @@ describe('GET /api/auth/me', () => {
 
 describe('POST /api/auth/wallet', () => {
   it('should link a valid Stellar wallet address', async () => {
-    const validAddress = 'GA5W247FEJSIBI2LNITA4DIP3ESP3BYCXU6IX4K67HK26LODH6H7G2G7';
+    // Real checksum-valid Stellar testnet StrKey (passes CRC16 validation).
+    const validAddress = 'GCJYV6S6MBRUUK42UNFUC2Q2EKRKYBH57COCAAWMD4ZML73TBUAB6L74';
     const res = await request(app)
       .post('/api/auth/wallet')
       .set('Authorization', `Bearer ${buyerToken}`)
@@ -172,7 +173,8 @@ describe('POST /api/auth/wallet', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.user.walletAddress).toBe(validAddress.toLowerCase());
+    // Stored as-is — StrKeys are case-sensitive; lowercasing would corrupt them.
+    expect(res.body.data.user.walletAddress).toBe(validAddress);
   });
 
   it('should reject invalid Stellar wallet address format', async () => {
@@ -186,7 +188,8 @@ describe('POST /api/auth/wallet', () => {
   });
 
   it('should reject linking a wallet address already in use by another user', async () => {
-    const sharedAddress = 'GB2SIBIDLNITA4DIP3ESP3BYCXU6IX4K67HK26LODH6H7G2G7XXXXXXX';
+    // Real checksum-valid Stellar testnet StrKey.
+    const sharedAddress = 'GBOGFPGF74EI72HAXM3ZVCYBB4SB4NOPQT677OGRMNUEV3O7ZRQQUIQD';
 
     // Link buyer
     await request(app)
@@ -207,26 +210,26 @@ describe('POST /api/auth/wallet', () => {
 });
 
 // ─── PATCH /api/auth/role ─────────────────────────────────────────────────────
+// SECURITY: This endpoint was removed — it allowed self-service privilege escalation
+// (any user → maintainer). These tests now assert the route no longer exists.
 
-describe('PATCH /api/auth/role', () => {
-  it('should update the user role to contributor or maintainer', async () => {
+describe('PATCH /api/auth/role (removed)', () => {
+  it('should no longer expose a self-service role endpoint (404)', async () => {
     const res = await request(app)
       .patch('/api/auth/role')
       .set('Authorization', `Bearer ${buyerToken}`)
       .send({ role: 'contributor' });
 
-    expect(res.statusCode).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.user.role).toBe('contributor');
+    expect(res.statusCode).toBe(404);
   });
 
-  it('should reject invalid role selection', async () => {
+  it('should not allow self-promotion to maintainer (404)', async () => {
     const res = await request(app)
       .patch('/api/auth/role')
       .set('Authorization', `Bearer ${buyerToken}`)
-      .send({ role: 'invalid_role' });
+      .send({ role: 'maintainer' });
 
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(404);
   });
 });
 

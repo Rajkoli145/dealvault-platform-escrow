@@ -2,15 +2,30 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const AppError = require('../utils/AppError');
 
+// SECURITY: Minimal cookie reader (no cookie-parser dependency) so protect can
+// accept the httpOnly `jwt` cookie set by the OAuth callback, not only the header.
+const getCookie = (cookieHeader, name) => {
+  if (!cookieHeader) return null;
+  const match = cookieHeader
+    .split(';')
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
+};
+
 /**
  * protect – Verifies JWT and attaches the authenticated user to req.user.
  */
 exports.protect = async (req, res, next) => {
   try {
-    // 1) Check token exists in Authorization header
+    // 1) Token from Authorization header (Bearer) OR the httpOnly `jwt` cookie.
+    // SECURITY: Cookie support is required for the OAuth flow, which delivers the
+    // token via httpOnly cookie instead of the URL.
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
       token = req.headers.authorization.split(' ')[1];
+    } else {
+      token = getCookie(req.headers.cookie, 'jwt');
     }
 
     if (!token) {

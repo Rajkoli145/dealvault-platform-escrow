@@ -84,6 +84,26 @@ jobs:
         run: npm run build
         working-directory: frontend
 
+  # ── Soroban Contract Tests ──────────────────────────────────────────────────────
+  contract-test:
+    name: Soroban Contract Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry and build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts/escrow
+
+      - name: Run contract tests
+        run: cargo test
+        working-directory: contracts/escrow
+
   # ── Security Audit ─────────────────────────────────────────────────────────────
   security:
     name: Security Audit

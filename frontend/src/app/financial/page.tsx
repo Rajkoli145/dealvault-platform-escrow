@@ -171,7 +171,9 @@ export default function FinancialPage() {
                           <div className="mb-2 flex flex-wrap items-center gap-2">
                             <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">{application.applicationId}</span>
                             <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${application.status === 'paid' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
-                              {application.status === 'paid' ? 'Paid to wallet' : 'Ready to withdraw'}
+                              {/* SECURITY/UX: This flow is fully simulated (localStorage). Do NOT
+                                  imply a real transfer until on-chain tx hashes are wired in. */}
+                              {application.status === 'paid' ? 'Simulated — no transaction sent' : 'Ready to withdraw'}
                             </span>
                           </div>
                           <p className="truncate text-sm font-bold text-gray-900">
@@ -190,7 +192,7 @@ export default function FinancialPage() {
                           </div>
                           <div className="text-right">
                             <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Status</p>
-                            <p className="mt-1 font-semibold text-gray-700">{application.status === 'paid' ? 'Received' : 'Released'}</p>
+                            <p className="mt-1 font-semibold text-gray-700">{application.status === 'paid' ? 'Simulated — no transaction sent' : 'Released'}</p>
                           </div>
                         </div>
                       </div>

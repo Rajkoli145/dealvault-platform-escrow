@@ -1,6 +1,5 @@
 const { optionalAuth, restrictTo } = require('../middleware/auth');
 const errorHandler = require('../middleware/errorHandler');
-const helpers = require('../utils/helpers');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 
@@ -281,14 +280,10 @@ describe('AuthController Edge Cases', () => {
     findSpy.mockRestore();
   });
 
-  it('should call next with error in updateRole if db fails', async () => {
-    const req = { user: { _id: 'id' }, body: { role: 'contributor' } };
-    const res = {};
-    const next = jest.fn();
-    const findSpy = jest.spyOn(User, 'findById').mockRejectedValue(new Error('DB error'));
-    await authController.updateRole(req, res, next);
-    expect(next).toHaveBeenCalledWith(expect.any(Error));
-    findSpy.mockRestore();
+  // SECURITY: updateRole handler was removed (self-service role escalation). Assert
+  // it is no longer exported so it cannot be reintroduced unguarded by accident.
+  it('should no longer export an updateRole handler', () => {
+    expect(authController.updateRole).toBeUndefined();
   });
 
   it('should call next with error in updateProfile if db fails', async () => {
@@ -321,11 +316,5 @@ describe('AuthController Edge Cases', () => {
     await authController.changePassword(req, res, next);
     expect(next).toHaveBeenCalledWith(expect.any(Error));
     findSpy.mockRestore();
-  });
-});
-
-describe('Placeholder helpers.js', () => {
-  it('should run placeholder generateToken function', () => {
-    helpers.generateToken('123');
   });
 });

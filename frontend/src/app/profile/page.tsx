@@ -14,9 +14,10 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { readDemoWallet, writeDemoWallet } from '../../lib/demoFlow';
+import { isValidEd25519PublicKey } from '../../utils/stellarStrKey';
 
 export default function ProfilePage() {
-  const { user, token, isLoading, logout, loginWithToken } = useAuth();
+  const { user, token, isLoading, logout, refreshSession } = useAuth();
   const router = useRouter();
   
   const [walletAddress, setWalletAddress] = useState('');
@@ -42,13 +43,15 @@ export default function ProfilePage() {
   }, [user, isLoading, router]);
 
   useEffect(() => {
+    // SECURITY: Display the address exactly as stored — Stellar StrKeys are
+    // case-sensitive; uppercasing corrupts a valid address.
     if (user?.walletAddress) {
-      setWalletAddress(user.walletAddress.toUpperCase());
+      setWalletAddress(user.walletAddress);
       setWalletConnected(true);
     } else {
       const savedWallet = readDemoWallet();
       if (savedWallet) {
-        setWalletAddress(savedWallet.toUpperCase());
+        setWalletAddress(savedWallet);
         setWalletConnected(true);
       } else {
         setWalletAddress('');
@@ -63,31 +66,33 @@ export default function ProfilePage() {
       setWalletError('Please enter a Stellar wallet address.');
       return;
     }
-    if (!/^G[A-Z2-7]{55}$/.test(address.toUpperCase())) {
-      setWalletError('Invalid Stellar address. Must start with G and be 56 characters long.');
+    // SECURITY: Validate the full StrKey (charset + version + CRC16 checksum) before
+    // sending. Never send an invalid/typo'd payout address to the backend. Do NOT
+    // uppercase — StrKeys are case-sensitive and uppercasing breaks the checksum.
+    if (!isValidEd25519PublicKey(address)) {
+      setWalletError('Invalid Stellar address — failed checksum. Check for typos.');
       return;
     }
-    
+
     setWalletError('');
     setIsConnectingWallet(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/auth/wallet`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/wallet`, {
         method: 'POST',
+        credentials: 'include', // SECURITY: send httpOnly jwt cookie (see AuthContext dev note)
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ walletAddress: address.toUpperCase() })
+        body: JSON.stringify({ walletAddress: address })
       });
       const data = await res.json();
       if (data.success) {
-        writeDemoWallet(address.toUpperCase());
-        setWalletAddress(address.toUpperCase());
+        writeDemoWallet(address);
+        setWalletAddress(address);
         setWalletConnected(true);
-        if (token) {
-          loginWithToken(token);
-        }
+        refreshSession();
       } else {
         setWalletError(data.message || 'Failed to link wallet.');
       }
@@ -101,11 +106,12 @@ export default function ProfilePage() {
   const handleDisconnectWallet = async () => {
     setWalletError('');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/auth/wallet`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/wallet`, {
         method: 'POST',
+        credentials: 'include', // SECURITY: send httpOnly jwt cookie
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ walletAddress: '' })
       });
@@ -114,9 +120,7 @@ export default function ProfilePage() {
         setWalletAddress('');
         writeDemoWallet('');
         setWalletConnected(false);
-        if (token) {
-          loginWithToken(token);
-        }
+        refreshSession();
       } else {
         setWalletError(data.message || 'Failed to unlink wallet.');
       }

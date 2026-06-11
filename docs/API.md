@@ -3,16 +3,34 @@
 ## Base URL
 ```
 Development: http://localhost:5000/api
-Production:  https://api.dealvault.io/api
+Production:  <!-- TODO: verify — no production deployment is defined in the repo -->
 ```
 
 ## Authentication
-All protected endpoints require a JWT Bearer token in the Authorization header:
+
+The API issues a JWT (**HS256**, expires after 7 days — configurable via `JWT_EXPIRES_IN`).
+
+- `POST /auth/register` and `POST /auth/login` return the token in the JSON body **and**
+  set it as an `httpOnly` cookie named `jwt`.
+- The GitHub OAuth callback sets the `httpOnly` cookie only (never the URL).
+- Protected endpoints accept either the cookie or a Bearer header:
+
 ```
 Authorization: Bearer <token>
 ```
 
-Tokens are issued on login/register and expire after 7 days (configurable via `JWT_EXPIRES_IN`).
+> **Local dev note:** cross-origin (`:3000` → `:5000`, plain http) the cookie is not sent —
+> serve frontend + API same-origin behind a proxy, or use the Bearer header.
+
+## Rate Limits (disabled in `NODE_ENV=test`)
+
+| Scope | Limit |
+|---|---|
+| All `/api/` routes | 100 req / minute |
+| `POST /auth/login` | 10 req / 15 minutes |
+| `POST /auth/register` | 5 req / 15 minutes |
+| `/auth/wallet` | 5 req / hour |
+| `GET /auth/github/callback` | 20 req / hour |
 
 ---
 
@@ -40,8 +58,6 @@ Returns server health status.
 #### `POST /auth/register`
 Register a new user account.
 
-**Rate Limit:** 5 requests / 15 minutes
-
 **Request Body**
 | Field    | Type   | Required | Description                       |
 |----------|--------|----------|-----------------------------------|
@@ -55,87 +71,57 @@ Register a new user account.
 {
   "success": true,
   "token": "<jwt>",
-  "data": {
-    "user": {
-      "_id": "...",
-      "name": "Aman Koli",
-      "email": "aman@example.com",
-      "role": "buyer",
-      "accountStatus": "active",
-      "reputationScore": 100,
-      "createdAt": "2026-01-01T00:00:00.000Z"
-    }
-  }
+  "data": { "user": { "_id": "...", "name": "...", "email": "...", "role": "buyer", "...": "..." } }
 }
 ```
 
-**Errors**
-| Code | Error                  | Reason                    |
-|------|------------------------|---------------------------|
-| 400  | `VALIDATION_ERROR`     | Invalid input fields      |
-| 409  | -                      | Email already registered  |
+**Errors:** `400 VALIDATION_ERROR`, `409` email already registered
 
 ---
 
 #### `POST /auth/login`
 Login with email and password.
 
-**Rate Limit:** 5 requests / 15 minutes
+**Request Body:** `email`, `password` (both required)
 
-**Request Body**
-| Field    | Type   | Required |
-|----------|--------|----------|
-| email    | string | ✅       |
-| password | string | ✅       |
-
-**Response `200`**
-```json
-{
-  "success": true,
-  "token": "<jwt>",
-  "data": { "user": { ... } }
-}
-```
+**Response `200`:** same shape as register.
 
 **Errors:** `400 VALIDATION_ERROR`, `401 Invalid credentials`, `403 Account suspended`
+
+---
+
+#### `GET /auth/github`
+Redirects to GitHub OAuth (sets a CSRF `state` nonce in an httpOnly cookie).
+
+#### `GET /auth/github/callback`
+GitHub OAuth callback. Verifies the `state` nonce, signs in (or creates) the user,
+sets the `jwt` httpOnly cookie, and redirects back to the frontend.
 
 ---
 
 #### `GET /auth/me` 🔒
 Get the currently authenticated user.
 
-**Response `200`**
-```json
-{
-  "success": true,
-  "data": { "user": { ... } }
-}
-```
-
----
-
 #### `PATCH /auth/change-password` 🔒
-Change current user's password.
+Change current user's password. Body: `currentPassword`, `newPassword`.
 
-**Request Body**
-| Field           | Type   | Required |
-|-----------------|--------|----------|
-| currentPassword | string | ✅       |
-| newPassword     | string | ✅       |
+#### `POST /auth/wallet` 🔒
+Link a Stellar wallet address (validated StrKey). Body: `walletAddress`.
 
----
+#### `PATCH /auth/profile` 🔒
+Update profile fields.
 
-#### `POST /auth/logout` 🔒
-Invalidates the JWT cookie.
+#### `POST /auth/logout`
+Clears the JWT cookie.
 
-**Response `200`**
-```json
-{ "success": true, "message": "Logged out successfully." }
-```
+> `PATCH /auth/role` was **removed** — self-service role changes were a privilege-escalation
+> vector. Role changes require an admin-only flow (not yet built).
 
 ---
 
 ### Deals
+
+All deal routes require authentication.
 
 #### `POST /deals` 🔒
 Create a new escrow deal (buyer only).
@@ -150,25 +136,6 @@ Create a new escrow deal (buyer only).
 | sellerId    | string | ✅       | Valid MongoDB ObjectId of seller         |
 | deadline    | string | ✅       | ISO 8601 future date                     |
 
-**Response `201`**
-```json
-{
-  "success": true,
-  "data": {
-    "deal": {
-      "_id": "...",
-      "title": "Logo Design",
-      "status": "CREATED",
-      "amount": "10000",
-      "currency": "INR",
-      "deadline": "2026-02-01T00:00:00.000Z",
-      "buyerId": "...",
-      "sellerId": "..."
-    }
-  }
-}
-```
-
 ---
 
 #### `GET /deals` 🔒
@@ -180,17 +147,6 @@ List deals for the authenticated user (paginated).
 | status | string | Filter by status (optional)              |
 | page   | number | Page number (default: 1)                 |
 | limit  | number | Items per page (default: 10, max: 100)   |
-
-**Response `200`**
-```json
-{
-  "success": true,
-  "data": {
-    "deals": [...],
-    "pagination": { "page": 1, "limit": 10, "total": 42, "pages": 5 }
-  }
-}
-```
 
 ---
 
@@ -215,22 +171,31 @@ Update deal status. Role-based transitions enforced:
 | DISPUTED    | RELEASED      | Admin     |
 | DISPUTED    | REFUNDED      | Admin     |
 
-**Request Body**
-```json
-{ "status": "ACCEPTED" }
-```
+> Status values are **database flags** — there is no on-chain verification today.
 
 ---
 
 #### `POST /deals/:id/deliver` 🔒
-Seller uploads delivery files (max 5 files, 10 MB each).
-
-**Form Data:** `files` (multipart/form-data)
-
----
+Seller uploads delivery files (max 5 files, 10 MB each). Form data: `files` (multipart).
 
 #### `POST /deals/:id/dispute` 🔒
 Buyer raises a dispute on an active deal.
+
+---
+
+### GitHub Bounty Bot
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/webhooks/github` | POST | Webhook HMAC signature | GitHub webhook receiver (dedup on `X-GitHub-Delivery`) |
+| `/issues` | GET | Public | List platform-tracked issues |
+| `/issues/:owner/:repo/:number` | GET | Public | Get issue + applications |
+| `/issues/:id/funding` | PATCH | Maintainer | Update issue funding |
+| `/applications` | POST | 🔒 | Submit application |
+| `/applications` | GET | 🔒 | List applications |
+| `/applications/:id` | GET | 🔒 | Get application details |
+| `/applications/:id/confirm` | PATCH | Maintainer | Confirm application |
+| `/applications/:id/reject` | PATCH | Maintainer | Reject application |
 
 ---
 

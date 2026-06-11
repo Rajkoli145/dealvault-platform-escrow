@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const axios = require('axios');
 const AppError = require('../utils/AppError');
+const { isValidEd25519PublicKey } = require('../utils/stellarStrKey');
 
 // ─── Token Helper ─────────────────────────────────────────────────────────────
 
@@ -10,6 +11,29 @@ const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   });
+
+// SECURITY: Minimal cookie reader (no cookie-parser dependency) used to read the
+// OAuth state nonce on the callback.
+const getCookie = (cookieHeader, name) => {
+  if (!cookieHeader) return null;
+  const match = cookieHeader
+    .split(';')
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
+};
+
+// SECURITY: Cookie attributes for the auth JWT. Cross-origin SPA (frontend on a
+// different host than the API) requires SameSite=None+Secure in production so the
+// httpOnly cookie is sent on /auth/me; falls back to Lax for local dev.
+const authCookieOptions = () => ({
+  httpOnly: true,
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  secure: process.env.NODE_ENV === 'production',
+  expires: new Date(
+    Date.now() + (parseInt(process.env.JWT_COOKIE_EXPIRES_IN) || 7) * 24 * 60 * 60 * 1000
+  ),
+});
 
 const sendTokenResponse = (user, statusCode, res) => {
   const token = signToken(user._id);
@@ -63,8 +87,10 @@ exports.register = async (req, res, next) => {
 
     sendTokenResponse(user, 201, res);
   } catch (err) {
-    console.error('CAUGHT IN REGISTER:', err);
-    res.status(500).json({ error: err.message, stack: err.stack, typeofNext: typeof next });
+    // SECURITY: Never leak error messages or stack traces to the client. Log
+    // server-side and return a generic error via the global handler.
+    console.error('Registration error:', err);
+    return next(new AppError('Registration failed.', 500));
   }
 };
 
@@ -149,27 +175,9 @@ exports.changePassword = async (req, res, next) => {
   }
 };
 
-/**
- * PATCH /api/auth/role
- */
-exports.updateRole = async (req, res, next) => {
-  try {
-    const { role } = req.body;
-    if (!['maintainer', 'contributor'].includes(role)) {
-      return next(new AppError('Invalid role selection.', 400));
-    }
-    const user = await User.findById(req.user._id);
-    user.role = role;
-    await user.save({ validateBeforeSave: false });
-    
-    res.status(200).json({
-      success: true,
-      data: { user: user.toSafeObject() }
-    });
-  } catch (err) {
-    next(err);
-  }
-};
+// SECURITY: updateRole handler removed — it let any authenticated user promote
+// themselves to maintainer (privilege escalation). Reintroduce only as an
+// admin-gated endpoint with an authorization check on the caller's role.
 
 /**
  * PATCH /api/auth/profile
@@ -203,10 +211,21 @@ exports.updateProfile = async (req, res, next) => {
  * Redirects the browser to GitHub's OAuth authorization page.
  */
 exports.githubRedirect = (req, res) => {
+  // SECURITY: CSRF protection — bind this OAuth flow to a random nonce stored in an
+  // httpOnly cookie and echoed back as the `state` param; verified on callback.
+  const state = crypto.randomBytes(16).toString('hex');
+  res.cookie('oauth_state', state, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 10 * 60 * 1000, // 10 minutes
+  });
+
   const params = new URLSearchParams({
     client_id: process.env.GITHUB_CLIENT_ID,
     redirect_uri: process.env.GITHUB_CALLBACK_URL,
     scope: 'read:user user:email',
+    state,
   });
   res.redirect(`https://github.com/login/oauth/authorize?${params}`);
 };
@@ -217,8 +236,16 @@ exports.githubRedirect = (req, res) => {
  */
 exports.githubCallback = async (req, res, next) => {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
     if (!code) return next(new AppError('GitHub OAuth code missing.', 400));
+
+    // SECURITY: Verify the OAuth state nonce against the httpOnly cookie (CSRF /
+    // login-CSRF protection). Reject if absent or mismatched.
+    const cookieState = getCookie(req.headers.cookie, 'oauth_state');
+    res.clearCookie('oauth_state');
+    if (!state || !cookieState || state !== cookieState) {
+      return next(new AppError('Invalid or missing OAuth state.', 400));
+    }
 
     // 1) Exchange code for access token
     const tokenRes = await axios.post(
@@ -250,16 +277,18 @@ exports.githubCallback = async (req, res, next) => {
     const githubProfile = profileRes.data;
     const emails       = emailsRes.data;
 
-    // Pick primary verified email, fall back to profile email
-    const primaryEmail =
-      (emails.find((e) => e.primary && e.verified) ||
-       emails.find((e) => e.primary) ||
-       emails[0])?.email ||
-      githubProfile.email;
+    // SECURITY: Only accept a GitHub-VERIFIED email. Linking/creating accounts by an
+    // unverified email allowed account takeover (attacker adds victim's unverified
+    // email to their GitHub, then inherits the victim's DealVault account).
+    const verifiedEmail =
+      (Array.isArray(emails) &&
+        (emails.find((e) => e.primary && e.verified) || emails.find((e) => e.verified)))
+        ?.email || null;
 
-    if (!primaryEmail) {
-      return next(new AppError('Could not retrieve a verified email from GitHub. Please make sure your GitHub account has a public or verified email.', 400));
+    if (!verifiedEmail) {
+      return next(new AppError('A verified primary email on your GitHub account is required to sign in.', 400));
     }
+    const primaryEmail = verifiedEmail;
 
     // 3) Upsert user (find by githubId first, then email)
     let user = await User.findByGithubId(String(githubProfile.id));
@@ -296,10 +325,13 @@ exports.githubCallback = async (req, res, next) => {
       });
     }
 
-    // 4) Sign JWT and redirect back to frontend
+    // 4) Sign JWT, deliver via httpOnly cookie, redirect back to frontend
+    // SECURITY: Token is set as an httpOnly cookie, NOT placed in the URL — a token in
+    // the query string leaks via browser history, proxy/server logs, and Referer headers.
     const token = signToken(user._id);
+    res.cookie('jwt', token, authCookieOptions());
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-    res.redirect(`${clientUrl}/auth/callback?token=${token}`);
+    res.redirect(`${clientUrl}/auth/callback`);
   } catch (err) {
     console.error('GitHub OAuth Error:', err);
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
@@ -337,7 +369,15 @@ exports.linkWallet = async (req, res, next) => {
     if (!walletAddress || walletAddress.trim() === '') {
       user.walletAddress = undefined;
     } else {
-      user.walletAddress = walletAddress.toLowerCase().trim();
+      const addr = walletAddress.trim();
+      // SECURITY: Validate the full Stellar StrKey (charset + version byte + CRC16
+      // checksum), not just a regex — rejects typo'd/truncated payout addresses.
+      if (!isValidEd25519PublicKey(addr)) {
+        return next(new AppError('invalid_stellar_address', 400));
+      }
+      // SECURITY: Store as-is. Stellar StrKeys are case-sensitive base32; lowercasing
+      // corrupts the address and breaks any payout pipeline that consumes it.
+      user.walletAddress = addr;
     }
     await user.save();
 

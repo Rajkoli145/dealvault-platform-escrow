@@ -110,18 +110,27 @@ exports.updateFunding = async (req, res, next) => {
       return next(new AppError('Funding must be a non-negative number.', 400));
     }
 
-    const updateData = { funding };
-    if (fundingCurrency) updateData.fundingCurrency = fundingCurrency;
-
-    const issue = await Issue.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    );
-
+    const issue = await Issue.findById(req.params.id);
     if (!issue) {
       return next(new AppError('Issue not found.', 404));
     }
+
+    // SECURITY: Only the maintainer who registered the issue (addedBy) or an admin may
+    // change its funding — previously any "maintainer" could rewrite any repo's bounty.
+    if (req.user.role !== 'admin' && (!req.user.githubUsername || issue.addedBy !== req.user.githubUsername)) {
+      return next(new AppError('You are not authorized to change funding for this issue.', 403));
+    }
+
+    // SECURITY: Funding may only change while the issue is OPEN. Once it is assigned (or
+    // completed/closed) the bounty is effectively committed — allowing edits enables a
+    // bait-and-switch (advertise $500, get a contributor assigned, then drop it to $0).
+    if (issue.status !== 'open') {
+      return next(new AppError(`Funding can only be changed while the issue is open (current: ${issue.status}).`, 400));
+    }
+
+    issue.funding = funding;
+    if (fundingCurrency) issue.fundingCurrency = fundingCurrency;
+    await issue.save();
 
     res.status(200).json({
       success: true,

@@ -100,7 +100,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       unique: true,
       sparse: true,
-      lowercase: true,
+      // SECURITY: No `lowercase` — Stellar StrKeys are case-sensitive base32 with a
+      // checksum; lowercasing produces an invalid address. Validated in linkWallet.
     },
     
     bankAccount: {
