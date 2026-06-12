@@ -21,6 +21,13 @@ export interface AuthUser {
   createdAt?: string;
   followers?: number;
   following?: number;
+  kyc?: {
+    status: string;
+    submittedAt?: string;
+    reviewedAt?: string;
+    verifiedAt?: string;
+    reviewNote?: string;
+  };
 }
 
 interface AuthContextValue {
