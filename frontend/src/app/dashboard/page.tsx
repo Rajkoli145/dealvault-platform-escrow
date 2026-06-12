@@ -12,7 +12,7 @@ import Image from 'next/image';
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 
 export default function DashboardPage() {
-  const { user, token, isLoading, logout, loginWithToken } = useAuth();
+  const { user, token, isLoading, logout, refreshSession } = useAuth();
   const router = useRouter();
 
   const [linkedinUrl,  setLinkedinUrl]  = useState('');
@@ -53,20 +53,20 @@ export default function DashboardPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) return;
     setSaving(true);
     setError('');
     try {
       const res = await fetch(`${API}/auth/profile`, {
         method: 'PATCH',
+        credentials: 'include', // SECURITY: send httpOnly jwt cookie (token may be null after refresh)
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ linkedinUrl, twitterUrl, portfolioUrl, bio }),
       });
       if (!res.ok) throw new Error('Failed to save profile');
-      loginWithToken(token);
+      refreshSession();
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err: any) {
@@ -82,18 +82,20 @@ export default function DashboardPage() {
   };
 
   const handleRoleSwitch = async (newRole: 'maintainer' | 'contributor') => {
-    if (!token) return;
+    // NOTE: /auth/role was removed (self-service role escalation). This flow is known-
+    // broken and will 404 until an admin-only role-change endpoint exists (see CLAUDE.md).
     try {
       const res = await fetch(`${API}/auth/role`, {
         method: 'PATCH',
+        credentials: 'include', // SECURITY: send httpOnly jwt cookie
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ role: newRole }),
       });
       if (res.ok) {
-        loginWithToken(token);
+        refreshSession();
         // Maintainer → go to the maintainer application flow
         // Contributor → go to the bounties explorer
         if (newRole === 'maintainer') {

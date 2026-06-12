@@ -8,7 +8,7 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { MongoMemoryReplSet } = require('mongodb-memory-server');
 const app = require('../server');
 const User = require('../models/User');
 const Issue = require('../models/Issue');
@@ -22,7 +22,8 @@ let contributor, maintainer;
 let testIssue;
 
 beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
+  // Replica set (not standalone) so confirmApplication's MongoDB transaction works.
+  mongoServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   await mongoose.connect(mongoServer.getUri());
   process.env.JWT_SECRET = 'test_jwt_secret_that_is_long_enough';
 });

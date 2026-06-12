@@ -14,9 +14,10 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { readDemoWallet, writeDemoWallet } from '../../lib/demoFlow';
+import { isValidEd25519PublicKey } from '../../utils/stellarStrKey';
 
 export default function ProfilePage() {
-  const { user, token, isLoading, logout, loginWithToken } = useAuth();
+  const { user, token, isLoading, logout, refreshSession } = useAuth();
   const router = useRouter();
   
   const [walletAddress, setWalletAddress] = useState('');
@@ -40,13 +41,15 @@ export default function ProfilePage() {
   }, [user, isLoading, router]);
 
   useEffect(() => {
+    // SECURITY: Display the address exactly as stored — Stellar StrKeys are
+    // case-sensitive; uppercasing corrupts a valid address.
     if (user?.walletAddress) {
-      setWalletAddress(user.walletAddress.toUpperCase());
+      setWalletAddress(user.walletAddress);
       setWalletConnected(true);
     } else {
       const savedWallet = readDemoWallet();
       if (savedWallet) {
-        setWalletAddress(savedWallet.toUpperCase());
+        setWalletAddress(savedWallet);
         setWalletConnected(true);
       } else {
         setWalletAddress('');
@@ -61,31 +64,33 @@ export default function ProfilePage() {
       setWalletError('Please enter a Stellar wallet address.');
       return;
     }
-    if (!/^G[A-Z2-7]{55}$/.test(address.toUpperCase())) {
-      setWalletError('Invalid Stellar address. Must start with G and be 56 characters long.');
+    // SECURITY: Validate the full StrKey (charset + version + CRC16 checksum) before
+    // sending. Never send an invalid/typo'd payout address to the backend. Do NOT
+    // uppercase — StrKeys are case-sensitive and uppercasing breaks the checksum.
+    if (!isValidEd25519PublicKey(address)) {
+      setWalletError('Invalid Stellar address — failed checksum. Check for typos.');
       return;
     }
-    
+
     setWalletError('');
     setIsConnectingWallet(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/auth/wallet`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/wallet`, {
         method: 'POST',
+        credentials: 'include', // SECURITY: send httpOnly jwt cookie (see AuthContext dev note)
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ walletAddress: address.toUpperCase() })
+        body: JSON.stringify({ walletAddress: address })
       });
       const data = await res.json();
       if (data.success) {
-        writeDemoWallet(address.toUpperCase());
-        setWalletAddress(address.toUpperCase());
+        writeDemoWallet(address);
+        setWalletAddress(address);
         setWalletConnected(true);
-        if (token) {
-          loginWithToken(token);
-        }
+        refreshSession();
       } else {
         setWalletError(data.message || 'Failed to link wallet.');
       }
@@ -99,11 +104,12 @@ export default function ProfilePage() {
   const handleDisconnectWallet = async () => {
     setWalletError('');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/auth/wallet`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/wallet`, {
         method: 'POST',
+        credentials: 'include', // SECURITY: send httpOnly jwt cookie
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ walletAddress: '' })
       });
@@ -112,9 +118,7 @@ export default function ProfilePage() {
         setWalletAddress('');
         writeDemoWallet('');
         setWalletConnected(false);
-        if (token) {
-          loginWithToken(token);
-        }
+        refreshSession();
       } else {
         setWalletError(data.message || 'Failed to unlink wallet.');
       }
@@ -274,7 +278,7 @@ export default function ProfilePage() {
           <div className="bg-green-50 border border-green-200 rounded-lg shadow-sm p-4 flex items-center gap-3">
             <CheckCircle2 className="w-5 h-5 text-green-700 flex-shrink-0" />
             <div>
-              <div className="text-xs font-mono text-green-700 mb-1">// VERIFIED</div>
+              <div className="text-xs font-mono text-green-700 mb-1">{'// VERIFIED'}</div>
               <div className="text-sm font-semibold text-green-900">Identity Verified</div>
               <div className="text-xs text-green-800">
                 Your identity and address have been successfully verified
@@ -287,7 +291,7 @@ export default function ProfilePage() {
           <div className="bg-amber-50 border border-amber-200 rounded-lg shadow-sm p-4 flex items-center gap-3">
             <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
             <div>
-              <div className="text-xs font-mono text-amber-700 mb-1">// IN PROGRESS</div>
+              <div className="text-xs font-mono text-amber-700 mb-1">{'// IN PROGRESS'}</div>
               <div className="text-sm font-semibold text-amber-900">Verification In Progress</div>
               <div className="text-xs text-amber-800">Your documents are being reviewed</div>
             </div>
@@ -297,7 +301,7 @@ export default function ProfilePage() {
           <div className="bg-red-50 border border-red-200 rounded-lg shadow-sm p-4 flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
             <div>
-              <div className="text-xs font-mono text-red-700 mb-1">// FAILED</div>
+              <div className="text-xs font-mono text-red-700 mb-1">{'// FAILED'}</div>
               <div className="text-sm font-semibold text-red-900">Verification Failed</div>
               {user.kyc?.reviewNote && (
                 <div className="text-xs text-red-800 mt-1">{user.kyc.reviewNote}</div>

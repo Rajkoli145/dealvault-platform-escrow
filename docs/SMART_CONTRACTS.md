@@ -2,126 +2,131 @@
 
 ## Overview
 
-DealVault uses a **Solana on-chain escrow program** to hold funds trustlessly between buyers and sellers. The program is written in Rust using the native Solana program model with Borsh serialization.
+DealVault uses a **Soroban escrow contract** (Rust, `no_std`) on the Stellar network to
+hold USDC trustlessly between a maintainer (funder) and a contributor. The whole
+contract lives in `contracts/escrow/src/lib.rs`.
 
-## Program Address
+> An orphaned native **Solana** program exists at `contracts/solana/` — it does not
+> compile, is unused, and is **not** a deliverable. This document covers the live
+> Soroban contract only.
+
+## Contract Address
 ```
-Devnet:  <deploy and update here>
-Mainnet: <deploy and update here>
-```
-
----
-
-## Architecture
-
-```
-lib.rs (entrypoint + dispatch)
-├── instructions/
-│   ├── init_escrow.rs   → instruction 0: lock funds
-│   ├── release.rs       → instruction 1: pay seller
-│   ├── refund.rs        → instruction 2: refund buyer
-│   └── dispute.rs       → instruction 3: raise dispute
-├── state.rs             → EscrowAccount struct (on-chain state)
-└── error.rs             → EscrowError enum
+Testnet: <deploy and update here>
+Mainnet: not deployed (out of MVP scope)
 ```
 
 ---
 
-## On-Chain State: `EscrowAccount`
+## Entry Points
 
-Stored in a PDA (Program Derived Address) account:
+### `fund_escrow`
 
-| Field                        | Type         | Description                              |
-|------------------------------|--------------|------------------------------------------|
-| `is_initialized`             | bool         | Whether account is in use                |
-| `buyer_pubkey`               | Pubkey       | Deal buyer                               |
-| `seller_pubkey`              | Pubkey       | Deal seller                              |
-| `temp_token_account_pubkey`  | Pubkey       | SPL token account holding funds          |
-| `buyer_token_account_pubkey` | Pubkey       | Buyer's token account (for refunds)      |
-| `seller_token_account_pubkey`| Pubkey       | Seller's token account (for release)     |
-| `expected_amount`            | u64          | Amount locked in escrow                  |
-| `status`                     | EscrowStatus | Current deal status                      |
-| `deadline`                   | i64          | Unix timestamp of deadline               |
-| `dispute_resolver`           | Option<Pubkey>| Admin/arbitrator for dispute resolution |
-| `deal_id`                    | [u8; 32]     | Off-chain deal ID (for indexing)         |
-
-**Account size:** 245 bytes
-
----
-
-## Escrow Status Lifecycle
-
-```
-Created → Funded → InProgress → Submitted → Approved → Released
-                                    ↓
-                                 Disputed → Released (admin)
-                                          → Refunded (admin)
+```rust
+fund_escrow(env, deal_id: Symbol, maintainer: Address, contributor: Address,
+            usdc_token: Address, amount: i128, platform_wallet: Address, admin: Address)
 ```
 
+Called by the **maintainer** (`maintainer.require_auth()`). Transfers `amount` USDC from
+the maintainer into the contract and persists the deal.
+
+Checks:
+- `amount > 0` (`amount_zero`)
+- `contributor != maintainer` (`same_party`)
+- `admin != maintainer` (`admin_is_maintainer`) — the maintainer has **no self-refund ability**
+
+Stores per-deal (persistent storage, typed `DataKey` entries):
+- `Deal(deal_id)` → `(contributor, amount, usdc_token)`
+- `Admin(deal_id)` → refund authority (fixed at fund time)
+- `Platform(deal_id)` → fee destination (fixed at fund time — `release_funds` cannot redirect it)
+- `State(deal_id)` → `DealState::Active`
+
+Emits `Funded { deal_id, amount, contributor, maintainer }`.
+
 ---
 
-## Instructions
+### `release_funds`
 
-### 0. InitEscrow
-Initializes and funds the escrow account.
-
-**Accounts:**
-| # | Account                  | Writable | Signer | Description              |
-|---|--------------------------|----------|--------|--------------------------|
-| 0 | buyer                    | ❌       | ✅     | Deal initiator           |
-| 1 | seller                   | ❌       | ❌     | Deal counterparty        |
-| 2 | temp_token_account       | ✅       | ❌     | SPL token holding account|
-| 3 | buyer_token_account      | ❌       | ❌     | Buyer's refund account   |
-| 4 | seller_token_account     | ❌       | ❌     | Seller's payout account  |
-| 5 | escrow_account           | ✅       | ❌     | PDA to store state       |
-| 6 | rent sysvar              | ❌       | ❌     | Rent sysvar              |
-| 7 | token_program            | ❌       | ❌     | SPL Token program        |
-
-**Instruction Data (48 bytes):**
-```
-[0..8]   expected_amount  u64 little-endian
-[8..16]  deadline         i64 little-endian (unix timestamp)
-[16..48] deal_id          [u8; 32]
+```rust
+release_funds(env, deal_id: Symbol, maintainer: Address)
 ```
 
----
+Called by the **maintainer** on approval. Pays **98%** to the contributor and **2%** to
+the platform wallet stored at fund time.
 
-### 1. Release
-Transfers escrowed funds to the seller. Called by the buyer after approving work.
+Guards:
+- Deal must exist (`deal_not_found`)
+- `State == Active` (`already_settled`) — blocks double-release and release-after-refund
+- State is flipped to `Released` **before** any transfer (settle-once)
+- Fee math uses checked `i128` arithmetic (`arithmetic_overflow`)
 
-**Required status:** `Submitted` or `Approved`  
-**Signer:** Buyer
-
----
-
-### 2. Refund
-Returns escrowed funds to the buyer. Called by dispute resolver or buyer after deadline.
-
-**Required status:** `Funded`, `InProgress`, or `Disputed`  
-**Signer:** Dispute resolver OR buyer (only after deadline)
+Emits `Released { deal_id, amount }`.
 
 ---
 
-### 3. RaiseDispute
-Marks escrow as disputed and records the dispute resolver's pubkey.
+### `refund_maintainer`
 
-**Required status:** `InProgress` or `Submitted`  
-**Signer:** Buyer
+```rust
+refund_maintainer(env, deal_id: Symbol, admin: Address, maintainer: Address)
+```
+
+Dispute path. Only the **admin persisted at fund time** may refund: the supplied `admin`
+is compared to the stored one (`not_admin`) and then `stored_admin.require_auth()` is
+required. Refunds the full amount to the maintainer.
+
+Guards: deal exists, `State == Active`, state flipped to `Refunded` before the transfer.
+
+Emits `Refunded { deal_id, amount }`.
 
 ---
 
-## Security
+## On-Chain State
 
-| Check                          | Implementation                              |
-|--------------------------------|---------------------------------------------|
-| Signer validation              | `account.is_signer` checked on every IX     |
-| Self-deal prevention           | Buyer ≠ Seller enforced in InitEscrow       |
-| Rent exemption                 | Verified against `Rent` sysvar              |
-| Program ownership              | `escrow_account.owner == program_id`        |
-| SPL Token program validation   | Verified against `spl_token::id()`          |
-| State machine enforcement      | Invalid transitions return `InvalidState`   |
-| Deadline enforcement           | Clock sysvar checked for time-based logic   |
-| Overflow protection            | Rust's `checked_add` used for arithmetic    |
+```rust
+enum DataKey {            // persistent storage, per deal_id
+  Deal(Symbol),           // (contributor: Address, amount: i128, usdc_token: Address)
+  State(Symbol),          // DealState
+  Admin(Symbol),          // refund authority
+  Platform(Symbol),       // fee destination
+}
+
+enum DealState { Active, Released, Refunded }
+```
+
+### State Lifecycle
+
+```
+fund_escrow ──► Active ──release_funds──► Released   (terminal)
+                  │
+                  └──refund_maintainer──► Refunded   (terminal)
+```
+
+---
+
+## Security Properties
+
+| Check                       | Implementation                                          |
+|-----------------------------|---------------------------------------------------------|
+| Funder authorization        | `maintainer.require_auth()` on fund/release             |
+| Refund authorization        | Stored admin compared + `require_auth()`                |
+| No self-refund              | `admin != maintainer` enforced at fund time             |
+| Settle-once                 | `DealState` guard; state flipped **before** transfers   |
+| Fee-redirect prevention     | `platform_wallet` persisted at fund time, not caller-supplied on release |
+| Self-deal prevention        | `contributor != maintainer`                             |
+| Zero/negative amounts       | `amount > 0` asserted                                   |
+| Overflow protection         | `checked_mul` / `checked_div` / `checked_sub` on `i128` |
+| Auditability                | `Funded` / `Released` / `Refunded` contract events      |
+
+## Known Limitations
+
+- **Persistent-storage TTL is not extended on access.** A long-lived deal could hit
+  storage expiration and become unreadable (funds strandable). Planned fix:
+  `env.storage().persistent().extend_ttl(&key, threshold, extend_to)` on access.
+- **No unit tests yet** — CI (`contract-test` job) proves compilation only. Write tests
+  before any testnet deploy you intend to rely on.
+- `Symbol` deal IDs are limited to ≤32 characters.
+- The backend and frontend are **not wired to this contract** — DB deal status is
+  self-attested, not chain-verified.
 
 ---
 
@@ -129,21 +134,24 @@ Marks escrow as disputed and records the dispute resolver's pubkey.
 
 ### Prerequisites
 - [Rust](https://rustup.rs/) + `cargo`
-- [Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools) `>=1.18`
+- [`stellar-cli`](https://developers.stellar.org/docs/tools/cli)
 
 ### Build
 ```bash
-cd contracts/solana
-cargo build-sbf
+cd contracts/escrow
+stellar contract build      # or: cargo build
 ```
 
 ### Test
 ```bash
-cargo test
+cargo test                  # currently 0 tests — compilation check only
 ```
 
-### Deploy to Devnet
+### Deploy to Testnet
 ```bash
-solana config set --url devnet
-solana program deploy target/deploy/dealvault_escrow.so
+stellar contract deploy \
+  --wasm target/wasm32v1-none/release/escrow.wasm \
+  --source-account <your-account> \
+  --network testnet \
+  --alias dealvault_escrow
 ```

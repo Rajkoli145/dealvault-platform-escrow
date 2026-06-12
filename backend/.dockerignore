@@ -1,6 +1,13 @@
-node_modules
-npm-debug.log
+# SECURITY: build context is backend/ (see docker/docker-compose.yml) —
+# keep secrets, deps and local artifacts out of the image context
 .env
-.git
+*.env
+.env.*
+!.env.example
+node_modules/
+coverage/
+uploads/
+.git/
 .gitignore
+npm-debug.log
 tests

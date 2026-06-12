@@ -23,7 +23,7 @@
     <img src="https://img.shields.io/badge/Asset-USDC-2775CA?style=flat-square" alt="USDC" />
   </a>
   <a href="#">
-    <img src="https://img.shields.io/badge/Status-Testnet-yellow?style=flat-square" alt="Status" />
+    <img src="https://img.shields.io/badge/Status-MVP%20%2F%20Testnet-yellow?style=flat-square" alt="Status" />
   </a>
   <a href="#">
     <img src="https://img.shields.io/badge/PRs-Welcome-brightgreen?style=flat-square" alt="PRs Welcome" />
@@ -34,9 +34,8 @@
 
 <p>
   <a href="#-overview">Overview</a> ·
-  <a href="#-why-dealvault">Why DealVault</a> ·
+  <a href="#-project-status">Project Status</a> ·
   <a href="#-how-it-works">How It Works</a> ·
-  <a href="#-use-cases">Use Cases</a> ·
   <a href="#-technology-stack">Tech Stack</a> ·
   <a href="#-getting-started">Getting Started</a> ·
   <a href="#-smart-contract">Smart Contract</a>
@@ -52,33 +51,23 @@
 
 Project owners lock funds before work begins — ensuring contributors, freelancers, and contractors have **guaranteed payment** the moment agreed conditions are met.
 
-By moving escrow entirely on-chain, DealVault removes the need to trust intermediaries while providing **transparent, auditable, and instant settlement** across 180+ countries.
-
 > _"Every task should have verified funding. Every contributor should have payment protection."_
 
 ---
 
-## ❓ Why DealVault?
+## 🚧 Project Status
 
-Traditional freelance and bounty payments rely on trust alone — and trust fails.
+DealVault is an **MVP**. Be aware of what is real and what is simulated today:
 
-| Problem | DealVault Solution |
+| Component | Status |
 |---|---|
-| Clients disappear after work is done | Funds locked in escrow **before** work starts |
-| Contributors wait weeks for payment | **Instant release** via Soroban smart contract |
-| Cross-border transfers are slow & costly | Stellar settles globally in **3–5 seconds** for fractions of a cent |
-| Platforms act as custodians with high fees | **Non-custodial** — only you and the contract control funds |
-| No transparency in fund status | Every transaction **on-chain and auditable** |
-
-### ✨ Key Benefits
-
-- 🔐 **Escrow-backed payments** — funds locked until conditions are met
-- ⚡ **Instant settlement** — Soroban contract releases automatically on approval
-- 🌍 **Global accessibility** — works for anyone with a Stellar wallet
-- 🔍 **Transparent on-chain transactions** — every action auditable
-- 💵 **Multi-asset support** — USDC, XLM, and any Stellar asset
-- ⚖️ **Built-in dispute workflows** — fair resolution with admin mediation
-- 🏆 **Reputation system** — contributors rated after every deal
+| Soroban escrow contract (`contracts/escrow/`) | ✅ Real — hardened, compiles, targets Stellar **testnet** |
+| Backend API (auth, deals, GitHub bounty bot) | ✅ Real — Express 5 + MongoDB, 100 passing tests |
+| GitHub bot (issue tracking via `dealvault` label) | ✅ Real — GitHub App webhook integration |
+| Marketing site + dashboard UI | ✅ Real — Next.js 14 |
+| End-to-end fund flow in the frontend | ⚠️ **Simulated** (localStorage demo, see `frontend/src/lib/demoFlow.ts`) |
+| Backend ↔ chain integration | ❌ Not built — deal status in the DB is **not** verified on-chain |
+| Wallet signing | ❌ Not built — the wallet kit only picks an address (testnet) |
 
 ---
 
@@ -106,32 +95,13 @@ Traditional freelance and bounty payments rely on trust alone — and trust fail
         │     └─────────────────────────────┘           │
 ```
 
-### Deal Lifecycle
+### Deal Lifecycle (backend state machine)
 
 ```
-CREATED → FUNDED → IN_PROGRESS → SUBMITTED → APPROVED → RELEASED
-                                      │
-                                      └──→ DISPUTED → (Admin resolves)
+CREATED → ACCEPTED → FUNDED → IN_PROGRESS → SUBMITTED → APPROVED → RELEASED
+                                                 │
+                                                 └──→ DISPUTED → RELEASED / REFUNDED (admin)
 ```
-
----
-
-## 🎯 Use Cases
-
-### 🐛 Open Source Bounties
-Fund GitHub issues and pay contributors through escrow-backed rewards. Maintainers set a USDC reward per issue — contributors see verified funding before applying.
-
-### 💼 Freelance Contracts
-Protect both clients and freelancers with milestone-based payments. No more "pay me first" or "deliver first" standoffs.
-
-### 📋 Service Agreements
-Manage contractor and agency payments without relying on intermediaries. Smart contracts enforce the terms automatically.
-
-### 🛒 Marketplace Transactions
-Secure transactions between buyers and sellers using programmable escrow. Funds release only when the buyer confirms delivery.
-
-### 🌐 Free Network Reports _(No Money Required)_
-Maintainers can submit repos without any USDC — purely to grow network visibility, attract contributors, and build reputation. Upgradeable to funded at any time.
 
 ---
 
@@ -139,16 +109,16 @@ Maintainers can submit repos without any USDC — purely to grow network visibil
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| **Frontend** | React · TypeScript · Vite · Tailwind | User interface |
-| **Backend** | Node.js · Express | API · deal metadata · notifications |
-| **Database** | MongoDB | Users · deals · audit logs |
-| **Smart Contracts** | Soroban (Rust) | Escrow logic · fund locking · release |
-| **Network** | Stellar | Settlement · transaction layer |
-| **Assets** | USDC · XLM · Stellar Assets | Escrow currency (USDC preferred) |
-| **Wallet** | Freighter · Lobstr · xBull | User signs transactions |
-| **Auth** | GitHub OAuth · Stellar Wallet | Login options |
-| **Realtime** | Socket.io | Live notifications |
-| **Hosting** | Vercel (FE) · Render (BE) | Deployment |
+| **Frontend** | Next.js 14 (App Router) · React 18 · TypeScript · Tailwind | User interface |
+| **Backend** | Node.js 20 · Express 5 · Mongoose 9 | API · deal metadata · bounty bot |
+| **Database** | MongoDB | Users · deals · issues · applications |
+| **Smart Contract** | Soroban (Rust, `no_std`) | Escrow logic · fund locking · release |
+| **Network** | Stellar (testnet) | Settlement layer |
+| **Asset** | USDC (`i128` amounts) | Escrow currency |
+| **Wallet** | Stellar Wallets Kit (address selection only) | Wallet connection |
+| **Auth** | GitHub OAuth + email/password · JWT (HS256, httpOnly cookie) | Login |
+| **GitHub Bot** | Octokit GitHub App + webhooks | Issue/bounty tracking |
+| **Infra** | Docker Compose (backend + frontend) · GitHub Actions CI | Deploys & tests |
 
 ---
 
@@ -157,22 +127,17 @@ Maintainers can submit repos without any USDC — purely to grow network visibil
 ### Prerequisites
 
 - Node.js ≥ 20
-- MongoDB
-- Rust + `stellar-cli` (for contract development)
+- MongoDB (local or Atlas)
+- Rust + [`stellar-cli`](https://developers.stellar.org/docs/tools/cli) (for contract development)
 - Docker (optional)
 
 ### Backend
 
 ```bash
 cd backend
-cp .env.example .env
+cp .env.example .env      # fill in MONGODB_URI, JWT_SECRET, GitHub App creds
 npm install
-npm run dev
-```
-
-Server runs on:
-```
-http://localhost:5000
+npm run dev               # http://localhost:5000
 ```
 
 ### Frontend
@@ -180,20 +145,26 @@ http://localhost:5000
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev               # http://localhost:3000
 ```
 
-Frontend runs on:
-```
-http://localhost:5174
-```
+Set `NEXT_PUBLIC_API_URL` to point at the backend (defaults assume `http://localhost:5000/api`).
+
+> **Local dev note:** the auth JWT rides an httpOnly cookie. With the frontend on `:3000`
+> and the API on `:5000` over plain http, the cookie will not be sent cross-origin —
+> serve both behind one proxy (same origin) for login to work in dev.
 
 ### Docker
 
 ```bash
 cd docker
-docker compose up --build
+docker compose up --build   # 2 services: backend + frontend (no MongoDB container)
 ```
+
+> **Note:** compose does not define a MongoDB service — point `MONGODB_URI` at Atlas or
+> a separately-run instance. Env loading from the repo-root `.env` is currently broken
+> when running from `docker/` (no `env_file:` key); export the variables in your shell
+> or add `env_file` entries.
 
 ---
 
@@ -202,51 +173,53 @@ docker compose up --build
 ```
 dealvault-platform-escrow/
 │
-├── backend/                    # Node.js + Express API
-│   ├── controllers/            # Route handlers
-│   ├── models/                 # MongoDB schemas
+├── backend/                    # Node.js + Express 5 API
+│   ├── controllers/            # auth, deals, applications, issues, webhooks
+│   ├── models/                 # User, Deal, Issue, Application (Mongoose)
 │   ├── routes/                 # API endpoints
-│   └── tests/                  # Unit + integration tests
+│   ├── middleware/             # auth (JWT), sanitize, error handler
+│   ├── services/               # GitHub App bot (Octokit)
+│   └── tests/                  # Jest + supertest + mongodb-memory-server
 │
-├── frontend/                   # React + TypeScript UI
+├── frontend/                   # Next.js 14 (App Router) + TypeScript
 │   └── src/
-│       ├── components/         # Reusable UI components
-│       ├── images/             # Static assets
-│       └── App.tsx             # Root component
+│       ├── app/                # Routes: landing, bounties, dashboard, profile, …
+│       ├── context/            # AuthContext (JWT via cookie + /auth/me)
+│       └── components/         # UI components
 │
-├── contracts/                  # Soroban smart contracts
-│   └── soroban/
-│       ├── src/
-│       │   ├── lib.rs          # Core escrow logic
-│       │   └── test.rs         # Contract unit tests
+├── contracts/
+│   └── escrow/                 # Soroban escrow contract (Rust)
+│       ├── src/lib.rs          # fund_escrow / release_funds / refund_maintainer
 │       └── Cargo.toml
 │
-└── docker/                     # Container configuration
-    └── docker-compose.yml
+├── docs/                       # Architecture, API, deployment, contract docs
+└── docker/                     # Dockerfiles + docker-compose.yml
 ```
 
 ---
 
 ## 📜 Smart Contract
 
-The Soroban escrow contract is the **core of DealVault**. It holds USDC trustlessly and enforces all payment rules without any human intermediary.
+The Soroban escrow contract (`contracts/escrow/src/lib.rs`) holds USDC and enforces payment rules.
 
-### Core Functions
+### Entry Points
 
-| Function | Description |
-|---|---|
-| `init_escrow` | Lock funds into escrow — called when maintainer funds a deal |
-| `release` | Release funds to contributor — called on approval |
-| `refund` | Return funds to sender — called on dispute ruling for client |
-| `dispute` | Escalate escrow for admin arbitration |
+| Function | Caller | Description |
+|---|---|---|
+| `fund_escrow(deal_id, maintainer, contributor, usdc_token, amount, platform_wallet, admin)` | Maintainer | Locks USDC; persists deal, fee destination, and refund admin |
+| `release_funds(deal_id, maintainer)` | Maintainer | Releases 98% to contributor, 2% to the platform wallet stored at fund time |
+| `refund_maintainer(deal_id, admin, maintainer)` | Stored admin only | Refunds the full amount on dispute |
 
-### Deploy to Testnet
+Hardening in place: settle-once state guards (no double release/refund), checked `i128`
+arithmetic, persisted fee destination and refund authority, typed per-deal storage keys,
+and `Funded`/`Released`/`Refunded` events.
+
+### Build & Deploy to Testnet
 
 ```bash
-# Build the contract
+cd contracts/escrow
 stellar contract build
 
-# Deploy to Stellar Testnet
 stellar contract deploy \
   --wasm target/wasm32v1-none/release/escrow.wasm \
   --source-account alice \
@@ -258,7 +231,7 @@ stellar contract deploy \
 
 ```
 Deal amount:        100 USDC
-Platform fee (2%):    2 USDC  → DealVault treasury
+Platform fee (2%):    2 USDC  → DealVault platform wallet
 Contributor gets:    98 USDC  → Auto-released by contract
 Stellar gas:        ~0.00001 XLM  → Network only
 ```
@@ -268,18 +241,18 @@ Stellar gas:        ~0.00001 XLM  → Network only
 ## 🧪 Testing
 
 ```bash
+# Backend (Jest + in-memory MongoDB)
 cd backend
 npm test
-
-# With coverage report
 npm run test:coverage
-```
 
-Contract tests:
-```bash
-cd contracts/soroban
+# Contract (compiles; no unit tests yet — write them before testnet deploy)
+cd contracts/escrow
 cargo test
 ```
+
+CI (`.github/workflows/test.yml`) runs backend tests + coverage, frontend type-check +
+build, `cargo test` on the contract, and `npm audit` on every push and pull request.
 
 ---
 

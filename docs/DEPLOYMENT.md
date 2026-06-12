@@ -7,7 +7,7 @@
 - [Docker Compose](https://docs.docker.com/compose/) ≥ 2.20
 - [Node.js](https://nodejs.org/) ≥ 20 (for local dev)
 - [Rust](https://rustup.rs/) + `cargo` (for smart contract builds)
-- [Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools) ≥ 1.18
+- [`stellar-cli`](https://developers.stellar.org/docs/tools/cli) (for contract build/deploy)
 
 ---
 
@@ -16,55 +16,82 @@
 ### Backend
 ```bash
 cd backend
-cp .env.example .env    # Fill in your values
+cp ../.env.example .env  # Fill in your values
 npm install
-npm run dev             # Starts on http://localhost:5000
+npm run dev              # Starts on http://localhost:5000
 ```
 
 ### Frontend
 ```bash
 cd frontend
-cp .env.example .env    # Fill in VITE_API_URL etc.
 npm install
-npm run dev             # Starts on http://localhost:5173
+npm run dev              # Starts on http://localhost:3000
 ```
 
-### Required `.env` variables (backend)
+Frontend env: `NEXT_PUBLIC_API_URL` (defaults assume `http://localhost:5000/api`).
+
+> **Auth in local dev:** the JWT rides an httpOnly cookie. Cross-origin over plain http
+> (frontend `:3000`, API `:5000`) the cookie is not sent — serve both behind one proxy
+> (same origin) for the session to establish.
+
+### Required `.env` variables (backend — see `.env.example` for the full list)
 ```env
 NODE_ENV=development
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/dealvault
-JWT_SECRET=your_super_secret_jwt_key_min_32_chars
+JWT_SECRET=<long-random-secret-min-64-chars>
 JWT_EXPIRES_IN=7d
 JWT_COOKIE_EXPIRES_IN=7
-CORS_ORIGIN=http://localhost:5173
+CORS_ORIGIN=http://localhost:3000
+
+# GitHub OAuth (login)
+GITHUB_CLIENT_ID=...
+GITHUB_CLIENT_SECRET=...
+GITHUB_CALLBACK_URL=http://localhost:5000/api/auth/github/callback
+CLIENT_URL=http://localhost:3000
+
+# GitHub App (bounty bot) — see docs/github-bot-setup.md
+GITHUB_APP_ID=...
+GITHUB_APP_PRIVATE_KEY=...        # base64-encoded PEM (or raw PEM)
+GITHUB_WEBHOOK_SECRET=...         # REQUIRED — server refuses to start without it
+GITHUB_APP_INSTALLATION_ID=...
+PLATFORM_BASE_URL=http://localhost:3000
 ```
 
 ---
 
-## 2. Docker (Full Stack)
+## 2. Docker (Backend + Frontend)
+
+Compose defines **2 services**: `backend` and `frontend`. There is **no MongoDB
+container** — point `MONGODB_URI` at Atlas or a separately-run instance.
 
 ```bash
-# From project root
-cp .env.example .env         # Fill in JWT_SECRET at minimum
 cd docker
-docker compose up --build    # Builds and starts all 3 services
+docker compose up --build
 ```
 
 Services:
-- Frontend → http://localhost
+- Frontend → http://localhost:3000 (Next.js standalone server)
 - Backend  → http://localhost:5000
-- MongoDB  → localhost:27017
+
+> **Known issue:** `docker-compose.yml` has no `env_file:` key and the repo-root `.env`
+> is not auto-read when running from `docker/`. Export the required variables in your
+> shell (or add `env_file: ../.env` to both services) before `docker compose up`.
+
+`.dockerignore` files at the repo root, `backend/`, and `frontend/` keep `.env`,
+`node_modules/`, build artifacts, and `.git/` out of the image contexts.
 
 ### Stop
 ```bash
-docker compose down           # Stop containers
-docker compose down -v        # Stop + remove volumes (⚠️ deletes DB)
+docker compose down
 ```
 
 ---
 
-## 3. Production Deployment (VPS / Cloud)
+## 3. Production Deployment
+
+<!-- TODO: verify — no production infrastructure is defined in this repo. The steps
+     below are generic VPS guidance, not a documented deployed setup. -->
 
 ### Environment Variables (production `.env`)
 ```env
@@ -74,17 +101,18 @@ MONGODB_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/dealvault
 JWT_SECRET=<long-random-secret-min-64-chars>
 JWT_EXPIRES_IN=7d
 JWT_COOKIE_EXPIRES_IN=7
-CORS_ORIGIN=https://dealvault.io
-MONGO_ROOT_USER=admin
-MONGO_ROOT_PASS=<secure-password>
+CORS_ORIGIN=https://<your-frontend-domain>
+# + GitHub OAuth and GitHub App variables as above
 ```
+
+> In production the auth cookie is set with `SameSite=None; Secure` — HTTPS is required
+> for cross-site frontend/backend deployments.
 
 ### Deploy Steps
 ```bash
-git clone https://github.com/your-org/dealvault-platform-escrow
+git clone https://github.com/DealVaultHQ/dealvault-platform-escrow
 cd dealvault-platform-escrow
-cp .env.example .env
-# Edit .env with production values
+# provide production env values (see Known issue above re: env_file)
 
 cd docker
 docker compose -f docker-compose.yml up -d --build
@@ -92,48 +120,44 @@ docker compose -f docker-compose.yml up -d --build
 
 ---
 
-## 4. Smart Contract Deployment (Solana)
+## 4. Smart Contract Deployment (Soroban / Stellar)
 
 ### Build
 ```bash
-cd contracts/solana
-cargo build-sbf
+cd contracts/escrow
+stellar contract build
 ```
 
-Built program at: `target/deploy/dealvault_escrow.so`
+Built WASM at: `target/wasm32v1-none/release/escrow.wasm`
 
-### Deploy to Devnet
+### Deploy to Testnet
 ```bash
-solana config set --url devnet
-solana airdrop 2                  # Get test SOL
-solana program deploy target/deploy/dealvault_escrow.so
+stellar contract deploy \
+  --wasm target/wasm32v1-none/release/escrow.wasm \
+  --source-account <your-account> \
+  --network testnet \
+  --alias dealvault_escrow
 ```
 
-### Deploy to Mainnet
-```bash
-solana config set --url mainnet-beta
-# Ensure wallet has enough SOL for deployment (~2–3 SOL)
-solana program deploy target/deploy/dealvault_escrow.so
-```
-
-Update the program address in your frontend `.env`:
-```env
-VITE_ESCROW_PROGRAM_ID=<deployed_program_id>
-```
+> The contract currently has **no unit tests** (CI proves compilation only) and the
+> backend/frontend are **not wired to the chain**. Write contract tests before any
+> testnet deploy you intend to rely on. Mainnet deployment is out of scope for the MVP.
 
 ---
 
 ## 5. CI/CD (GitHub Actions)
 
-The pipeline (`.github/workflows/test.yml`) automatically:
-1. Runs backend tests with a MongoDB service container
-2. Type-checks and builds the frontend
-3. Runs `npm audit` for security vulnerabilities
+The pipeline (`.github/workflows/test.yml`) runs on every push to `main`/`develop` and
+every pull request:
+
+1. **backend-test** — Jest suites + coverage (MongoDB service container)
+2. **frontend-test** — TypeScript type-check + Next.js build
+3. **contract-test** — `cargo test` on `contracts/escrow/`
+4. **security** — `npm audit` (backend + frontend, critical level)
 
 ### Required GitHub Secrets
 | Secret           | Description                      |
 |------------------|----------------------------------|
-| `JWT_SECRET`     | JWT signing secret for tests     |
 | `CODECOV_TOKEN`  | (Optional) Code coverage upload  |
 
 ---
@@ -142,14 +166,12 @@ The pipeline (`.github/workflows/test.yml`) automatically:
 
 ### Logs
 ```bash
-docker compose logs -f backend    # Stream backend logs
-docker compose logs -f frontend   # Stream nginx logs
+docker compose logs -f backend
+docker compose logs -f frontend
 ```
 
 ### Health Checks
-- Backend: `GET /api/health`
-- Frontend: `GET /health` (nginx)
-- MongoDB: `docker compose ps` shows health status
+- Backend: `GET /api/health` (also used by the compose healthcheck)
 
 ### Recommended Production Add-ons
 - **Error tracking:** [Sentry](https://sentry.io) — add `@sentry/node` to backend

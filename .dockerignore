@@ -1,0 +1,9 @@
+# SECURITY: keep secrets and bulk artifacts out of Docker build contexts
+.env
+*.env
+.env.*
+!.env.example
+node_modules/
+**/node_modules/
+contracts/escrow/target/
+.git/
