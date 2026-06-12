@@ -12,6 +12,7 @@ export interface AuthUser {
   avatar: string | null;
   githubUsername: string | null;
   githubAvatar: string | null;
+  discordUsername?: string | null;
   accountStatus: string;
   bio: string | null;
   linkedinUrl: string | null;

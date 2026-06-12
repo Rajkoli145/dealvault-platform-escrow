@@ -17,7 +17,7 @@ import { readDemoWallet, writeDemoWallet } from '../../lib/demoFlow';
 import { isValidEd25519PublicKey } from '../../utils/stellarStrKey';
 
 export default function ProfilePage() {
-  const { user, token, isLoading, logout, refreshSession } = useAuth();
+  const { user, token, isLoading, logout, refreshSession, loginWithToken } = useAuth();
   const router = useRouter();
   
   const [walletAddress, setWalletAddress] = useState('');

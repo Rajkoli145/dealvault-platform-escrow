@@ -11,12 +11,18 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 
-// ── Mock axios (Sumsub API calls) BEFORE requiring the app ────────────────────
-jest.mock('axios', () => ({
-  post: jest.fn(),
-}));
+// ── Mock the Sumsub token call BEFORE requiring the app ───────────────────────
+// createAccessToken uses native https (not axios), so mock it at the module
+// level; verifyWebhookDigest stays real so webhook HMAC paths are exercised.
+jest.mock('../utils/sumsub', () => {
+  const actual = jest.requireActual('../utils/sumsub');
+  return {
+    ...actual,
+    createAccessToken: jest.fn(),
+  };
+});
 
-const axios = require('axios');
+const sumsub = require('../utils/sumsub');
 const app = require('../server');
 const User = require('../models/User');
 
@@ -89,7 +95,7 @@ describe('POST /api/kyc/token', () => {
   });
 
   it('returns a Sumsub token and marks KYC pending', async () => {
-    axios.post.mockResolvedValueOnce({ data: { token: 'sumsub-sdk-token' } });
+    sumsub.createAccessToken.mockResolvedValueOnce('sumsub-sdk-token');
 
     const res = await request(app)
       .post('/api/kyc/token')
@@ -108,7 +114,7 @@ describe('POST /api/kyc/token', () => {
   });
 
   it('passes a custom levelName through to Sumsub', async () => {
-    axios.post.mockResolvedValueOnce({ data: { token: 'tok' } });
+    sumsub.createAccessToken.mockResolvedValueOnce('tok');
 
     const res = await request(app)
       .post('/api/kyc/token')
@@ -116,12 +122,11 @@ describe('POST /api/kyc/token', () => {
       .send({ levelName: 'enhanced-kyc-level' });
 
     expect(res.status).toBe(200);
-    const sentBody = axios.post.mock.calls[0][1];
-    expect(sentBody).toContain('enhanced-kyc-level');
+    expect(sumsub.createAccessToken.mock.calls[0][1]).toBe('enhanced-kyc-level');
   });
 
   it('returns 500 when Sumsub token creation fails', async () => {
-    axios.post.mockRejectedValueOnce(new Error('sumsub down'));
+    sumsub.createAccessToken.mockRejectedValueOnce(new Error('sumsub down'));
 
     const res = await request(app)
       .post('/api/kyc/token')
