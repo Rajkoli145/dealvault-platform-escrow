@@ -339,6 +339,120 @@ exports.githubCallback = async (req, res, next) => {
   }
 };
 
+// ─── Discord OAuth ────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/auth/discord
+ * Redirects the browser to Discord's OAuth authorization page.
+ * We expect the frontend to pass `?token=...` so we can link the Discord account
+ * to the currently logged in user.
+ */
+exports.discordRedirect = (req, res) => {
+  const { token } = req.query;
+  
+  const params = new URLSearchParams({
+    client_id: process.env.DISCORD_CLIENT_ID,
+    redirect_uri: process.env.DISCORD_CALLBACK_URL,
+    response_type: 'code',
+    scope: 'identify',
+    state: token || '', // Pass the JWT token in the state param to persist it across redirect
+  });
+  
+  res.redirect(`https://discord.com/api/oauth2/authorize?${params}`);
+};
+
+/**
+ * GET /api/auth/discord/callback
+ * Discord redirects here with ?code= and ?state= (which contains our JWT token).
+ */
+exports.discordCallback = async (req, res, next) => {
+  try {
+    const { code, state } = req.query;
+    if (!code) return next(new AppError('Discord OAuth code missing.', 400));
+    
+    // We need the token to know which user is linking their Discord account
+    const token = state;
+    if (!token) {
+      return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/profile?error=NoAuthToken`);
+    }
+
+    // Verify token to get the user ID
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/profile?error=InvalidToken`);
+    }
+
+    const userId = decoded.id;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/profile?error=UserNotFound`);
+    }
+
+    // 1) Exchange code for access token
+    const data = new URLSearchParams({
+      client_id: process.env.DISCORD_CLIENT_ID,
+      client_secret: process.env.DISCORD_CLIENT_SECRET,
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: process.env.DISCORD_CALLBACK_URL
+    });
+
+    const tokenRes = await axios.post(
+      'https://discord.com/api/oauth2/token',
+      data.toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+
+    const { access_token } = tokenRes.data;
+    if (!access_token) {
+      return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/profile?error=DiscordTokenFailed`);
+    }
+
+    // 2) Fetch Discord user profile
+    const profileRes = await axios.get('https://discord.com/api/users/@me', {
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+
+    const discordProfile = profileRes.data;
+
+    // 3) Update the user with their Discord info
+    user.discordId = discordProfile.id;
+    user.discordUsername = discordProfile.username;
+    await user.save({ validateBeforeSave: false });
+
+    // 4) Redirect back to profile page
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    res.redirect(`${clientUrl}/profile?discordLinked=true`);
+  } catch (err) {
+    console.error('Discord OAuth Error:', err.response?.data || err.message);
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    res.redirect(`${clientUrl}/profile?error=DiscordLinkingFailed`);
+  }
+};
+
+/**
+ * POST /api/auth/discord/unlink
+ */
+exports.unlinkDiscord = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return next(new AppError('User not found.', 404));
+
+    user.discordId = undefined;
+    user.discordUsername = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      success: true,
+      data: { user: user.toSafeObject() }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 /**
  * POST /api/auth/logout
  */
