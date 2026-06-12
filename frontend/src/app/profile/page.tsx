@@ -278,7 +278,7 @@ export default function ProfilePage() {
           <div className="bg-green-50 border border-green-200 rounded-lg shadow-sm p-4 flex items-center gap-3">
             <CheckCircle2 className="w-5 h-5 text-green-700 flex-shrink-0" />
             <div>
-              <div className="text-xs font-mono text-green-700 mb-1">// VERIFIED</div>
+              <div className="text-xs font-mono text-green-700 mb-1">{'// VERIFIED'}</div>
               <div className="text-sm font-semibold text-green-900">Identity Verified</div>
               <div className="text-xs text-green-800">
                 Your identity and address have been successfully verified
@@ -291,7 +291,7 @@ export default function ProfilePage() {
           <div className="bg-amber-50 border border-amber-200 rounded-lg shadow-sm p-4 flex items-center gap-3">
             <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
             <div>
-              <div className="text-xs font-mono text-amber-700 mb-1">// IN PROGRESS</div>
+              <div className="text-xs font-mono text-amber-700 mb-1">{'// IN PROGRESS'}</div>
               <div className="text-sm font-semibold text-amber-900">Verification In Progress</div>
               <div className="text-xs text-amber-800">Your documents are being reviewed</div>
             </div>
@@ -301,7 +301,7 @@ export default function ProfilePage() {
           <div className="bg-red-50 border border-red-200 rounded-lg shadow-sm p-4 flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
             <div>
-              <div className="text-xs font-mono text-red-700 mb-1">// FAILED</div>
+              <div className="text-xs font-mono text-red-700 mb-1">{'// FAILED'}</div>
               <div className="text-sm font-semibold text-red-900">Verification Failed</div>
               {user.kyc?.reviewNote && (
                 <div className="text-xs text-red-800 mt-1">{user.kyc.reviewNote}</div>
