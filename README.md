@@ -135,7 +135,7 @@ CREATED → ACCEPTED → FUNDED → IN_PROGRESS → SUBMITTED → APPROVED → R
 
 ```bash
 cd backend
-cp ../.env.example .env   # fill in MONGODB_URI, JWT_SECRET, GitHub App creds
+cp .env.example .env      # fill in MONGODB_URI, JWT_SECRET, GitHub App creds
 npm install
 npm run dev               # http://localhost:5000
 ```
