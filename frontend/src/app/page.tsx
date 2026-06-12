@@ -289,11 +289,19 @@ export default function Home() {
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
 
+  useEffect(() => {
+    const savedWallet = localStorage.getItem('dv_demo_wallet');
+    if (savedWallet) {
+      setConnectedAddress(savedWallet);
+    }
+  }, []);
+
   const handleConnect = async () => {
     setIsConnecting(true);
     try {
       const address = await connectStellarWallet();
       setConnectedAddress(address);
+      localStorage.setItem('dv_demo_wallet', address);
     } catch (err) {
       console.error(err);
     } finally {
@@ -304,6 +312,7 @@ export default function Home() {
   const handleDisconnect = async () => {
     await disconnectStellarWallet();
     setConnectedAddress(null);
+    localStorage.removeItem('dv_demo_wallet');
   };
 
   return (

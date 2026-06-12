@@ -11,7 +11,7 @@ import {
 
 type KycStatus = 'not_submitted' | 'pending' | 'approved' | 'rejected';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 
 export default function KYCVerificationPage() {
   const { user, token } = useAuth();
@@ -20,6 +20,7 @@ export default function KYCVerificationPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
   const [reviewNote, setReviewNote] = useState('');
+  const [sdkActive, setSdkActive] = useState(false);
   const sdkContainerRef = useRef<HTMLDivElement>(null);
   const sdkInstanceRef = useRef<any>(null);
 
@@ -64,55 +65,71 @@ export default function KYCVerificationPage() {
   };
 
   const launchSumsubSDK = (accessToken: string, ttl: number) => {
-    if (!sdkContainerRef.current) return;
+    // Show the SDK container first
+    setSdkActive(true);
+    setActionLoading(false);
 
-    const script = document.createElement('script');
-    script.src = 'https://static.sumsub.com/idensic/static/sns-websdk-builder.js';
-    script.async = true;
-    script.onload = () => {
+    const initSdk = () => {
       try {
         const snsWebSdk = (window as any).snsWebSdk;
         if (!snsWebSdk) throw new Error('Sumsub SDK not loaded');
 
-        const sdk = snsWebSdk.init({
-          appToken: accessToken,
-          sumsubToken: accessToken,
-          expirationInterval: Math.floor(ttl / 2) * 1000,
-          onMessage: (type: string, payload: any) => {
-            if (type === 'idCheckReady'|| type === 'applicantReviewed') {
-              fetchStatus();
-            }
-          },
-          onError: (err: any) => {
-            console.error('Sumsub SDK error:', err);
-            setError('Verification session error. Please try again.');
-            setActionLoading(false);
-          },
-          onClose: () => {
-            setActionLoading(false);
-          },
-        });
+        // Modern Sumsub WebSDK v2 init API
+        const sdk = snsWebSdk
+          .init(
+            accessToken,
+            // Token refresh callback
+            () => fetchTokenAndLaunch()
+          )
+          .withConf({
+            lang: 'en',
+            onMessage: (type: string, payload: any) => {
+              console.log('Sumsub message:', type, payload);
+              if (type === 'idCheck.onApplicantStatusChanged' || type === 'applicantReviewed') {
+                fetchStatus();
+              }
+            },
+            onError: (err: any) => {
+              console.error('Sumsub SDK error:', err);
+              setError('Verification session error. Please try again.');
+              setSdkActive(false);
+            },
+          })
+          .withOptions({ addViewportTag: false, adaptIframeHeight: true })
+          .on('idCheck.onStepCompleted', () => { fetchStatus(); })
+          .on('idCheck.onApplicantStatusChanged', () => { fetchStatus(); })
+          .build();
 
-        sdk.launch(sdkContainerRef.current);
+        sdk.launch('#sumsub-websdk-container');
         sdkInstanceRef.current = sdk;
       } catch (err) {
         console.error('Sumsub init error:', err);
         setError('Failed to initialize verification client.');
-        setActionLoading(false);
+        setSdkActive(false);
       }
     };
-    script.onerror = () => {
-      setError('Failed to load verification client.');
-      setActionLoading(false);
-      fetchStatus();
-    };
-    document.body.appendChild(script);
+
+    // Load SDK script if not already loaded
+    if ((window as any).snsWebSdk) {
+      initSdk();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://static.sumsub.com/idensic/static/sns-websdk-builder.js';
+      script.async = true;
+      script.onload = initSdk;
+      script.onerror = () => {
+        setError('Failed to load verification client.');
+        setSdkActive(false);
+      };
+      document.body.appendChild(script);
+    }
   };
 
   const handleRetry = () => {
     setStatus('not_submitted');
     setError('');
     setReviewNote('');
+    setSdkActive(false);
     if (sdkInstanceRef.current) {
       try { sdkInstanceRef.current.destroy(); } catch {}
       sdkInstanceRef.current = null;
@@ -353,8 +370,12 @@ export default function KYCVerificationPage() {
           </div>
         )}
 
-        {/* ─── SDK Mount Point ──────────────────────────────────────────────── */}
-        <div ref={sdkContainerRef} className="hidden" />
+        {/* ─── SDK Mount Point ──────────────────────────────────────── */}
+        <div
+          id="sumsub-websdk-container"
+          ref={sdkContainerRef}
+          className={sdkActive ? 'block w-full min-h-[600px]' : 'hidden'}
+        />
       </main>
 
       <Footer />

@@ -361,9 +361,8 @@ code {
 
 <!-- TOP BAR -->
 <header class="topbar">
-  <a class="topbar-logo" href="/" style="display: flex; align-items: center; gap: 9px;">
-    <img src="/images/DbLogo.png" alt="DealVault" style="height: 26px; width: auto;" />
-    <span style="font-family: var(--display); font-size: 14px; font-weight: 800; letter-spacing: -0.2px; color: var(--text);">DealVault</span>
+  <a class="topbar-logo" href="/" style="display: flex; align-items: center;">
+    <img src="/images/DbLogo.png" alt="DealVault" style="height: 38px; width: auto; transform: scale(1.1); transform-origin: left;" />
   </a>
   <div class="topbar-divider"></div>
   <span class="topbar-title">Documentation</span>
@@ -493,7 +492,7 @@ code {
       <p>This documentation covers everything — from how the escrow system works, to how contributors earn USDC, to how the Soroban smart contracts are deployed and function.</p>
 
       <div class="callout callout-tip">
-        <div class="callout-icon">💡</div>
+        <div class="callout-icon"></div>
         <div class="callout-body">
           <div class="callout-label">New here?</div>
           <div class="callout-text">Start with Platform Overview to understand the full system, then move to your role — Contributor or Maintainer.</div>
@@ -566,7 +565,7 @@ code {
       <p>Before applying or creating issues, you must verify your identity (KYC) and connect a Stellar wallet — Freighter, Lobstr, or xBull. This takes about 2 minutes.</p>
 
       <div class="callout callout-info">
-        <div class="callout-icon">ℹ️</div>
+        <div class="callout-icon"></div>
         <div class="callout-body">
           <div class="callout-label">Wallet requirement</div>
           <div class="callout-text">All payments are made in USDC on the Stellar network. You need a Stellar wallet address (starting with G...) to receive or send payments.</div>
@@ -651,7 +650,7 @@ code {
       </table>
 
       <div class="callout callout-info">
-        <div class="callout-icon">⬡</div>
+        <div class="callout-icon"></div>
         <div class="callout-body">
           <div class="callout-label">Stellar does not fund DealVault deals</div>
           <div class="callout-text">Stellar is the network (the road). Maintainers provide their own USDC. Stellar just transports and secures it. Think of it like the internet for money.</div>
@@ -710,7 +709,7 @@ code {
       </table>
 
       <div class="callout callout-warn">
-        <div class="callout-icon">⚠️</div>
+        <div class="callout-icon"></div>
         <div class="callout-body">
           <div class="callout-label">Irreversible once released</div>
           <div class="callout-text">Once a deal reaches RELEASED state, the transaction on Stellar is final and cannot be reversed. Always review submitted work carefully before approving.</div>
@@ -739,7 +738,7 @@ code {
       <p>Every issue on DealVault shows a <strong>✓ FUNDED</strong> badge — meaning the reward is already locked in escrow. Click <strong>Apply</strong>, and your application is sent to the maintainer.</p>
 
       <div class="callout callout-tip">
-        <div class="callout-icon">✓</div>
+        <div class="callout-icon"></div>
         <div class="callout-body">
           <div class="callout-label">Profile completeness matters</div>
           <div class="callout-text">Maintainers choose contributors based on reputation score, completed bounties, and skills. Keep your profile updated to improve your chances.</div>
@@ -788,7 +787,7 @@ code {
       <p>When a contributor submits work, review it carefully. If satisfied, click <strong>Approve & Release</strong>. The smart contract automatically releases funds to the contributor's Stellar wallet. If you need revisions, request them through the platform. If there's a serious disagreement, raise a dispute.</p>
 
       <div class="callout callout-critical">
-        <div class="callout-icon">⚠️</div>
+        <div class="callout-icon"></div>
         <div class="callout-body">
           <div class="callout-label">Approval is final</div>
           <div class="callout-text">Once you approve a submission, the USDC transfer on Stellar is irreversible. Always review deliverables thoroughly before clicking Approve.</div>
@@ -836,7 +835,7 @@ code {
         <li>Required for regulatory compliance with cross-border payments</li>
       </ul>
       <div class="callout callout-tip">
-        <div class="callout-icon">🔒</div>
+        <div class="callout-icon"></div>
         <div class="callout-body">
           <div class="callout-label">Data security</div>
           <div class="callout-text">KYC data is encrypted and stored securely. It is never shared with third parties or other platform users.</div>
@@ -949,7 +948,7 @@ code {
       <p>The contract is responsible for three things: <strong>locking funds, releasing funds, and refunding funds.</strong> No other logic. No complexity. Just three states, enforced by code.</p>
       <p>The contract is non-upgradeable after deployment. The rules cannot be changed by DealVault, maintainers, or contributors. This is the basis of trustlessness.</p>
       <div class="callout callout-tip">
-        <div class="callout-icon">🔍</div>
+        <div class="callout-icon"></div>
         <div class="callout-body">
           <div class="callout-label">Open source</div>
           <div class="callout-text">The full contract source code is publicly available on GitHub. Anyone can audit, fork, or verify the logic independently.</div>
@@ -1158,7 +1157,7 @@ Stellar gas:        ~0.000003 USD  →  Network only
         <li>GitHub OAuth — no passwords stored</li>
       </ul>
       <div class="callout callout-info">
-        <div class="callout-icon">🛡️</div>
+        <div class="callout-icon"></div>
         <div class="callout-body">
           <div class="callout-label">Report a vulnerability</div>
           <div class="callout-text">If you discover a security vulnerability in DealVault, please report it responsibly via GitHub Issues or contact the team directly. Do not disclose publicly until patched.</div>

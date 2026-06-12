@@ -24,16 +24,10 @@ export const WalletConnectButton: React.FC<WalletConnectButtonProps> = ({
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-2 border border-green-200 bg-green-50 px-3 py-1.5 rounded-lg shadow-sm">
           <CheckCircle className="w-4 h-4 text-green-600" />
-          <span className="text-xs font-mono font-semibold text-green-800">
-            {truncateAddress(connectedAddress)}
+          <span className="text-xs font-semibold text-green-800">
+            Connected
           </span>
         </div>
-        <button
-          onClick={onDisconnect}
-          className="text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 border border-gray-200 rounded-lg px-2.5 py-1.5 transition-colors font-medium"
-        >
-          Disconnect
-        </button>
       </div>
     );
   }

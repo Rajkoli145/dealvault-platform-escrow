@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import AppNavBar from '../../components/AppNavBar';
 import Footer from '../../components/Footer';
-import Lightfall from '../../components/Lightfall';
+import ShapeGrid from '../../components/ShapeGrid';
 import {
   Github,
   CheckCircle2,
@@ -231,25 +231,14 @@ export default function MaintainerApplyPage() {
       <div className="min-h-screen bg-[#0a0a0c] text-white pt-20 pb-24 relative overflow-hidden">
         {/* Background Grid Grid layer */}
         <div className="absolute inset-0 z-0">
-          <Lightfall
-            colors={['#A6C8FF', '#5227FF', '#FF9FFC']}
-            backgroundColor="#000000"
-            speed={0.5}
-            streakCount={2}
-            streakWidth={1}
-            streakLength={1}
-            glow={1}
-            density={0.6}
-            twinkle={1}
-            zoom={2.9}
-            backgroundGlow={0.5}
-            opacity={1}
-            mouseInteraction={false}
-            mouseStrength={0.5}
-            mouseRadius={1}
-            color1="#ffffff"
-            color2="#cfcfcf"
-            color3="#dfdfdf"
+          <ShapeGrid
+            direction="diagonal"
+            speed={0.3}
+            borderColor="#ffffff11"
+            squareSize={60}
+            hoverColor="#ffffff22"
+            shape="square"
+            hoverTrailAmount={6}
           />
         </div>
 

@@ -148,6 +148,29 @@ export default function ProfilePage() {
     setSkills(skills.filter(s => s !== skillToRemove));
   };
 
+  const handleConnectDiscord = () => {
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/auth/discord?token=${token}`;
+  };
+
+  const handleUnlinkDiscord = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/auth/discord/unlink`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (data.success && token) {
+        // Re-login to fetch updated user state
+        loginWithToken(token);
+      }
+    } catch (err) {
+      console.error('Failed to unlink Discord', err);
+    }
+  };
+
   const handleSaveProfile = () => {
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
@@ -171,7 +194,8 @@ export default function ProfilePage() {
   const initial = user.name?.[0]?.toUpperCase() || 'U';
   const kycVerified = user.kyc?.status === 'approved';
   const kycStatus = user.kyc?.status || 'not_submitted';
-  const completedSteps = (kycVerified ? 1 : 0) + (walletConnected ? 1 : 0);
+  const discordConnected = !!user.discordUsername;
+  const completedSteps = (kycVerified ? 1 : 0) + (walletConnected ? 1 : 0) + (discordConnected ? 1 : 0);
   const completionPercentage = (completedSteps / 3) * 100;
 
   const months = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
@@ -345,23 +369,23 @@ export default function ProfilePage() {
                 },
                 { 
                   step: 3, 
-                  text: 'Add Profile Details', 
-                  done: false, 
+                  text: 'Connect Discord Account', 
+                  done: discordConnected, 
                   pending: false,
-                  action: null
+                  action: discordConnected ? null : handleConnectDiscord
                 }
               ].map((item, index) => (
                 <button
                   key={index}
                   onClick={item.action}
-                  className={`w-full flex items-center gap-3 px-3 py-3 rounded border transition-colors text-left ${
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded border transition-all duration-500 text-left ${
                     item.done
-                      ? 'bg-gray-50 border-gray-200'
+                      ? 'border-green-400 bg-green-50 animate-pulse shadow-[0_0_12px_rgba(74,222,128,0.4)]'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >
                   {item.done ? (
-                    <div className="w-6 h-6 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
                       <Check className="w-3 h-3 text-white" />
                     </div>
                   ) : (
@@ -369,7 +393,7 @@ export default function ProfilePage() {
                       {item.step}
                     </div>
                   )}
-                  <span className={`flex-1 text-sm font-medium ${item.done ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                  <span className={`flex-1 text-sm font-medium ${item.done ? 'text-green-800' : 'text-gray-900'}`}>
                     {item.text}
                   </span>
                 </button>
@@ -434,15 +458,57 @@ export default function ProfilePage() {
                 <div className="text-xs text-gray-600">Connect your Stellar wallet above to get started</div>
               </div>
             ) : (
-              <div className="flex items-center gap-3 px-3 py-3 bg-gray-50 border border-gray-300 rounded">
-                <div className="text-xl">◇</div>
-                <div className="flex-1">
-                  <div className="font-mono text-xs font-semibold text-gray-900 truncate">{walletAddress}</div>
-                  <div className="text-xs text-gray-500">Stellar Wallet</div>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <span className="text-sm font-semibold text-green-800">Wallet connected successfully</span>
                 </div>
-                <span className="px-2 py-1 bg-gray-900 text-white text-xs font-semibold rounded whitespace-nowrap">PRIMARY</span>
-                <button onClick={handleDisconnectWallet} className="text-gray-400 hover:text-gray-600 transition-colors">
-                  <X className="w-4 h-4" />
+                <div className="flex items-center gap-3 px-3 py-3 bg-gray-50 border border-gray-300 rounded">
+                  <div className="text-xl">◇</div>
+                  <div className="flex-1">
+                    <div className="font-mono text-xs font-semibold text-gray-900 truncate">{walletAddress}</div>
+                    <div className="text-xs text-gray-500">Stellar Wallet</div>
+                  </div>
+                  <span className="px-2 py-1 bg-gray-900 text-white text-xs font-semibold rounded whitespace-nowrap">PRIMARY</span>
+                  <button onClick={handleDisconnectWallet} className="text-gray-400 hover:text-gray-600 transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Linked Accounts */}
+          <div className="lg:col-span-1 bg-white border border-gray-200 rounded-lg shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+            <div className="flex items-start gap-3 mb-6">
+              <Link2 className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-base font-bold text-gray-900 uppercase tracking-wider">Linked Accounts</h3>
+                <p className="text-xs text-gray-600 mt-1">Connect your social accounts to verify your identity.</p>
+              </div>
+            </div>
+
+            {discordConnected ? (
+              <div className="flex items-center gap-4 px-4 py-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <div className="w-10 h-10 rounded bg-[#5865F2] flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/>
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="text-lg font-mono text-gray-900 tracking-tight">{user.discordUsername}</div>
+                  <div className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Discord</div>
+                </div>
+                <button onClick={handleUnlinkDiscord} className="text-sm font-semibold text-gray-500 hover:text-red-500 transition-colors">
+                  Unlink
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-8 px-4 border border-dashed border-gray-300 rounded bg-gray-50">
+                <Link2 className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <div className="text-sm font-semibold text-gray-900 mb-1">No accounts linked</div>
+                <button onClick={handleConnectDiscord} className="mt-2 text-sm font-semibold text-[#5865F2] hover:text-[#4752C4] transition-colors underline">
+                  Connect Discord Account
                 </button>
               </div>
             )}
