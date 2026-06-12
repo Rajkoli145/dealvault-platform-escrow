@@ -96,6 +96,20 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
+    // ── Discord OAuth ──────────────────────────────────────────────────────────
+    discordId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      select: false,
+    },
+
+    discordUsername: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
     // ── Profile ───────────────────────────────────────────────────────────────
     walletAddress: {
       type: String,
@@ -354,6 +368,15 @@ userSchema.statics.findByEmailWithPassword = function (email) {
  */
 userSchema.statics.findByGithubId = function (githubId) {
   return this.findOne({ githubId }).select('+githubId');
+};
+
+/**
+ * Find a user by their Discord ID.
+ * @param {string} discordId
+ * @returns {Promise<Document|null>}
+ */
+userSchema.statics.findByDiscordId = function (discordId) {
+  return this.findOne({ discordId }).select('+discordId');
 };
 
 // ─── Model Export ─────────────────────────────────────────────────────────────

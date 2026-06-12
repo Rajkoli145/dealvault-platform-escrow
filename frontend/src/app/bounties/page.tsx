@@ -4,12 +4,13 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Search, ChevronDown, SlidersHorizontal,
-  GitBranch, Clock, LogOut, LayoutDashboard, Inbox,
-  Wallet, User, HelpCircle, Newspaper, ExternalLink, DollarSign, Send
+  GitBranch, Clock, Inbox,
+  DollarSign, Send
 } from 'lucide-react';
 import Image from 'next/image';
 import { SkeletonIssues } from '../../components/SkeletonLoader';
 import { applyToDemoBounty, demoBounties, readDemoApplications } from '../../lib/demoFlow';
+import AppNavBar from '../../components/AppNavBar';
 
 const LABEL_OPTIONS = ['All Labels', 'bug', 'enhancement', 'documentation', 'good first issue', 'help wanted'];
 const STACK_OPTIONS = ['All Tech Stack', 'TypeScript', 'Rust', 'Python', 'Solidity', 'Go'];
@@ -43,11 +44,7 @@ export default function BountiesPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-white flex flex-col">
-        <header className="border-b border-gray-100 px-8 h-16 grid grid-cols-3 items-center sticky top-0 bg-white/90 backdrop-blur-sm z-30">
-          <div className="flex items-center gap-2 cursor-pointer -ml-2">
-            <Image src="/images/DbLogo.png" alt="DealVault" width={160} height={64} className="h-16 w-auto object-contain object-left scale-[1.3] origin-left" />
-          </div>
-        </header>
+        <AppNavBar />
         <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-10">
           <SkeletonIssues />
         </main>
@@ -74,150 +71,10 @@ export default function BountiesPage() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* ─── Top Nav ──────────────────────────────────────────── */}
-      <header className="border-b border-gray-100 px-8 h-16 grid grid-cols-3 items-center sticky top-0 bg-white/90 backdrop-blur-sm z-30">
-        <div className="flex items-center gap-2 cursor-pointer -ml-2" onClick={() => router.push('/')}>
-          <Image src="/images/DbLogo.png" alt="DealVault" width={160} height={64} className="h-16 w-auto object-contain object-left scale-[1.3] origin-left hover:opacity-80 transition-opacity" />
-        </div>
-
-        {/* Nav Links */}
-        <nav className="hidden md:flex items-center justify-center gap-1">
-          {[
-            { label: 'Financial', icon: Wallet, href: '/financial' },
-            { label: 'Explore Issues', icon: GitBranch, href: '/bounties', active: true },
-            { label: 'My Applications', icon: Inbox, href: '/bounties/my' },
-          ].map(({ label, icon: Icon, href, active }) => (
-            <button
-              key={label}
-              onClick={() => router.push(href)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
-                active
-                  ? 'bg-black text-white shadow-sm'
-                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          ))}
-        </nav>
-
-        {/* User with Dropdown */}
-        <div className="flex items-center justify-end gap-3">
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={() => setProfileOpen(!profileOpen)}
-              className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
-            >
-              {avatarSrc ? (
-                <Image
-                  src={avatarSrc}
-                  alt={user.name}
-                  width={32}
-                  height={32}
-                  className="rounded-full ring-2 ring-gray-200 hover:ring-gray-300 transition-all"
-                  unoptimized
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-xs text-white font-bold">
-                  {initial}
-                </div>
-              )}
-              <span className="hidden lg:block">{user.name.split(' ')[0]}</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {/* Dropdown Menu */}
-            {profileOpen && (
-              <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-fade-in">
-                {/* Profile Section */}
-                <div className="p-4 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    {avatarSrc ? (
-                      <Image
-                        src={avatarSrc}
-                        alt={user.name}
-                        width={48}
-                        height={48}
-                        className="rounded-full ring-2 ring-gray-200"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-black flex items-center justify-center text-sm text-white font-bold">
-                        {initial}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate">{user.name}</p>
-                      <p className="text-xs text-gray-500 truncate">@{user.githubUsername || user.email}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => { router.push('/profile'); setProfileOpen(false); }}
-                    className="mt-3 w-full flex items-center justify-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 py-2 rounded-lg transition-colors"
-                  >
-                    <User className="w-4 h-4" />
-                    View Profile
-                  </button>
-                </div>
-
-                {/* Account Links */}
-                <div className="p-2 border-b border-gray-100">
-                  <button
-                    onClick={() => { router.push('/financial'); setProfileOpen(false); }}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    <Wallet className="w-4 h-4 text-gray-500" />
-                    <span>Financial</span>
-                    <ExternalLink className="w-3.5 h-3.5 text-gray-400 ml-auto" />
-                  </button>
-                  <button
-                    onClick={() => { router.push('/maintainer-apply'); setProfileOpen(false); }}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    <LayoutDashboard className="w-4 h-4 text-gray-500" />
-                    <span>Maintainer App</span>
-                    <ExternalLink className="w-3.5 h-3.5 text-gray-400 ml-auto" />
-                  </button>
-                </div>
-
-                {/* Resources Section */}
-                <div className="p-2 border-b border-gray-100">
-                  <p className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Resources</p>
-                  <button
-                    onClick={() => { setProfileOpen(false); }}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    <HelpCircle className="w-4 h-4 text-gray-500" />
-                    <span>FAQ</span>
-                  </button>
-                  <button
-                    onClick={() => { setProfileOpen(false); }}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    <Newspaper className="w-4 h-4 text-gray-500" />
-                    <span>News</span>
-                  </button>
-                </div>
-
-                {/* Account Section */}
-                <div className="p-2">
-                  <button
-                    onClick={() => { logout(); router.push('/'); setProfileOpen(false); }}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Sign Out</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+      <AppNavBar />
 
       {/* ─── Page Body ────────────────────────────────────────── */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-10">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-10 pt-24">
         {/* Header Row */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-8">
           <div>

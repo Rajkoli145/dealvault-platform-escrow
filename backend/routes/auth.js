@@ -14,12 +14,17 @@ router.post('/logout', authController.logout);
 router.get('/github',          authController.githubRedirect);
 router.get('/github/callback', authController.githubCallback);
 
+// ─── Discord OAuth (browser-redirect, no JWT needed) ──────────────────────
+router.get('/discord',          authController.discordRedirect);
+router.get('/discord/callback', authController.discordCallback);
+
 // ─── Protected Routes ──────────────────────────────────────────────────────────
 router.use(protect); // All routes below require authentication
 
 router.get('/me', authController.getMe);
 router.patch('/change-password', authController.changePassword);
 router.post('/wallet', ...validateLinkWallet, authController.linkWallet);
+router.post('/discord/unlink', authController.unlinkDiscord);
 router.patch('/role', authController.updateRole);
 router.patch('/profile', authController.updateProfile);
 

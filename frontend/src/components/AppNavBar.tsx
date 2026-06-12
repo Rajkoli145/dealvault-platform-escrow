@@ -35,33 +35,36 @@ export default function AppNavBar({ showNavItems = true }: AppNavBarProps) {
   ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-100">
-      <div className="max-w-7xl mx-auto px-8 h-16 grid grid-cols-3 items-center">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-md border-b border-gray-100">
+      <div className="max-w-7xl mx-auto px-8 h-16 flex items-center">
         {/* LEFT — Logo */}
-        <div className="flex items-center gap-2 -ml-2 cursor-pointer" onClick={() => router.push('/')}>
-          <Image src="/images/DbLogo.png" alt="DealVault" width={160} height={64} className="h-16 w-auto object-contain object-left scale-[1.3] origin-left hover:opacity-80 transition-opacity" />
+        <div className="flex-1 flex items-center">
+          <div className="flex items-center gap-2 -ml-2 cursor-pointer" onClick={() => router.push('/')}>
+            <Image src="/images/DbLogo.png" alt="DealVault" width={160} height={64} className="h-16 w-auto object-contain object-left scale-[1.3] origin-left hover:opacity-80 transition-opacity" />
+          </div>
         </div>
 
-        <div className="flex items-center justify-center gap-1">
+        {/* CENTER — Nav items (fixed width per item to prevent layout shift) */}
+        <div className="flex items-center gap-4">
           {showNavItems &&
             navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => router.push(item.href)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
-                  pathname === item.href
-                    ? 'bg-black text-white shadow-sm'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                className={`flex items-center justify-center gap-2 w-36 py-1.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                  pathname === item.href || (item.href !== '/bounties' && pathname.startsWith(item.href))
+                    ? 'bg-black text-white'
+                    : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
                 }`}
               >
-                <item.icon className="w-4 h-4" />
+                <item.icon className="w-4 h-4 flex-shrink-0" />
                 {item.label}
               </button>
             ))}
         </div>
 
         {/* RIGHT — Profile dropdown */}
-        <div className="flex items-center justify-end" ref={dropdownRef}>
+        <div className="flex-1 flex items-center justify-end" ref={dropdownRef}>
           <div className="relative">
           <button
             onClick={() => setProfileOpen(!profileOpen)}
