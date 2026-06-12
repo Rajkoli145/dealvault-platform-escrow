@@ -5,6 +5,7 @@
  * Includes submission, listing, confirmation, and rejection flows.
  */
 
+const mongoose = require('mongoose');
 const Application = require('../models/Application');
 const Issue = require('../models/Issue');
 const AppError = require('../utils/AppError');
@@ -14,6 +15,27 @@ const {
   applicationConfirmedMessage,
   applicationRejectedMessage,
 } = require('../services/botMessages');
+
+// ── Authorization helper ──────────────────────────────────────────────────────
+
+/**
+ * SECURITY: Verify the caller maintains the issue's repo before confirm/reject.
+ * The only maintainer identity on an Issue is `addedBy` (the GitHub username that
+ * applied the `dealvault` label, set server-side from the webhook). We match it
+ * against the caller's linked GitHub username; admins bypass.
+ * @returns {Promise<boolean>}
+ */
+async function callerOwnsIssue(application, user) {
+  if (user.role === 'admin') return true;
+  if (!user.githubUsername) return false;
+  const issueDoc = application.issue
+    ? await Issue.findById(application.issue)
+    : await Issue.findOne({
+        githubRepoFullName: application.githubRepoFullName,
+        githubIssueNumber: application.githubIssueNumber,
+      });
+  return !!issueDoc && issueDoc.addedBy === user.githubUsername;
+}
 
 // ── Controllers ───────────────────────────────────────────────────────────────
 
@@ -218,34 +240,49 @@ exports.confirmApplication = async (req, res, next) => {
       );
     }
 
-    // ── Update application ────────────────────────────────────────────────
-    application.status = 'confirmed';
-    application.confirmedBy = req.user._id;
-    application.confirmedAt = new Date();
-    await application.save();
+    // SECURITY: Only the maintainer who registered the issue (or an admin) may confirm.
+    if (!(await callerOwnsIssue(application, req.user))) {
+      return next(new AppError('You are not authorized to manage applications for this issue.', 403));
+    }
 
-    // ── Update the issue status and assignment ────────────────────────────
-    await Issue.findByIdAndUpdate(application.issue, {
-      status: 'assigned',
-      assignedTo: application.applicantGithubUsername,
-    });
+    // SECURITY/ATOMICITY: Wrap the 3-step confirm (confirm this app, assign the issue,
+    // reject competing apps) in a single transaction so a crash mid-sequence cannot
+    // leave a confirmed app with an unassigned issue or un-rejected competitors, and so
+    // two maintainers confirming concurrently cannot both succeed. Requires a replica set.
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        application.status = 'confirmed';
+        application.confirmedBy = req.user._id;
+        application.confirmedAt = new Date();
+        await application.save({ session });
 
-    // ── Reject all other pending applications for this issue ──────────────
-    await Application.updateMany(
-      {
-        _id: { $ne: application._id },
-        githubRepoFullName: application.githubRepoFullName,
-        githubIssueNumber: application.githubIssueNumber,
-        status: 'pending',
-      },
-      {
-        status: 'rejected',
-        rejectedAt: new Date(),
-        rejectionReason: 'Another applicant was selected for this issue.',
-      }
-    );
+        await Issue.findByIdAndUpdate(
+          application.issue,
+          { status: 'assigned', assignedTo: application.applicantGithubUsername },
+          { session }
+        );
 
-    // ── Post congratulations comment on GitHub ────────────────────────────
+        await Application.updateMany(
+          {
+            _id: { $ne: application._id },
+            githubRepoFullName: application.githubRepoFullName,
+            githubIssueNumber: application.githubIssueNumber,
+            status: 'pending',
+          },
+          {
+            status: 'rejected',
+            rejectedAt: new Date(),
+            rejectionReason: 'Another applicant was selected for this issue.',
+          },
+          { session }
+        );
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    // ── Post congratulations comment on GitHub (after the transaction commits) ──
     try {
       const comment = applicationConfirmedMessage({
         applicantUsername: application.applicantGithubUsername,
@@ -300,6 +337,11 @@ exports.rejectApplication = async (req, res, next) => {
       return next(
         new AppError(`Application is already ${application.status}.`, 400)
       );
+    }
+
+    // SECURITY: Only the maintainer who registered the issue (or an admin) may reject.
+    if (!(await callerOwnsIssue(application, req.user))) {
+      return next(new AppError('You are not authorized to manage applications for this issue.', 403));
     }
 
     const { reason } = req.body || {};

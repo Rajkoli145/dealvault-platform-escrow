@@ -7,6 +7,13 @@ const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 const AppError = require('./utils/AppError');
+const { assertWebhookSecretConfigured } = require('./services/githubBot');
+
+// SECURITY: Fail fast if the webhook secret is missing (outside tests), so the
+// webhook endpoint can never run in its fail-open state.
+if (process.env.NODE_ENV !== 'test') {
+  assertWebhookSecretConfigured();
+}
 
 // ─── Initialize App ───────────────────────────────────────────────────────────
 
@@ -51,6 +58,45 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// SECURITY: brute-force protection on credential login
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: {
+    success: false,
+    error: 'TOO_MANY_REQUESTS',
+    message: 'Too many login attempts. Please try again after 15 minutes.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// SECURITY: wallet linking is a high-value mutation — keep attempts rare
+const walletLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  message: {
+    success: false,
+    error: 'TOO_MANY_REQUESTS',
+    message: 'Too many wallet update attempts. Please try again after an hour.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// SECURITY: throttle OAuth callback to blunt code-replay / enumeration attempts
+const githubCallbackLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 20,
+  message: {
+    success: false,
+    error: 'TOO_MANY_REQUESTS',
+    message: 'Too many OAuth attempts. Please try again after an hour.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 100,
@@ -73,6 +119,11 @@ app.use('/api/kyc/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '10kb' }));         // Limit payload size
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
+// SECURITY: strip Mongo operator injection + XSS payloads from all request
+// input (body/params/query) before any route handler runs. Express 5-safe
+// wrapper around express-mongo-sanitize + xss-clean — see middleware/sanitize.js.
+app.use(require('./middleware/sanitize'));
+
 // ─── DB Connection ────────────────────────────────────────────────────────────
 
 if (process.env.NODE_ENV !== 'test') {
@@ -94,8 +145,10 @@ app.get('/api/health', (req, res) => {
 // Apply general rate limiter to all API routes
 if (process.env.NODE_ENV !== 'test') {
   app.use('/api/', apiLimiter);
-  app.use('/api/auth/login', authLimiter);
-  app.use('/api/auth/register', authLimiter);
+  app.use('/api/auth/login', loginLimiter);                    // SECURITY: 10 req / 15 min
+  app.use('/api/auth/register', authLimiter);                  // SECURITY: 5 req / 15 min
+  app.use('/api/auth/wallet', walletLimiter);                  // SECURITY: 5 req / hour
+  app.use('/api/auth/github/callback', githubCallbackLimiter); // SECURITY: 20 req / hour
 }
 
 // Mount routers

@@ -161,7 +161,7 @@ export default function KYCVerificationPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900 tracking-tight">Identity Verification</h1>
-              <p className="text-xs text-gray-500 font-mono">// SECURE VERIFICATION</p>
+              <p className="text-xs text-gray-500 font-mono">{'// SECURE VERIFICATION'}</p>
             </div>
           </div>
 
@@ -185,7 +185,7 @@ export default function KYCVerificationPage() {
                 <div className="border border-gray-200 rounded p-4 flex gap-3">
                   <FileCheck className="w-5 h-5 text-gray-900 flex-shrink-0 mt-0.5" />
                   <div>
-                    <div className="text-xs font-mono text-gray-500 mb-1">// IDENTITY</div>
+                    <div className="text-xs font-mono text-gray-500 mb-1">{'// IDENTITY'}</div>
                     <div className="text-sm font-semibold text-gray-900 mb-1">Government-issued ID</div>
                     <div className="text-xs text-gray-600 leading-relaxed">
                       Passport, Aadhaar Card, National ID, or Driver&apos;s License.
@@ -196,7 +196,7 @@ export default function KYCVerificationPage() {
                 <div className="border border-gray-200 rounded p-4 flex gap-3">
                   <Home className="w-5 h-5 text-gray-900 flex-shrink-0 mt-0.5" />
                   <div>
-                    <div className="text-xs font-mono text-gray-500 mb-1">// ADDRESS PROOF</div>
+                    <div className="text-xs font-mono text-gray-500 mb-1">{'// ADDRESS PROOF'}</div>
                     <div className="text-sm font-semibold text-gray-900 mb-1">Proof of Address</div>
                     <div className="text-xs text-gray-600 leading-relaxed">
                       Utility bill, bank statement, election/voter ID, or
@@ -211,7 +211,7 @@ export default function KYCVerificationPage() {
               <div className="flex items-start gap-3">
                 <ShieldCheck className="w-4 h-4 text-gray-900 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-xs font-mono text-gray-500 mb-1">// SECURITY</div>
+                  <div className="text-xs font-mono text-gray-500 mb-1">{'// SECURITY'}</div>
                   <p className="text-sm text-gray-700 leading-relaxed">
                     Documents are processed directly by Sumsub — encrypted, transient,
                     and never stored on our servers. Your data is handled per PCI DSS / SOC 2 standards.
@@ -224,7 +224,7 @@ export default function KYCVerificationPage() {
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
                 <XCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-xs font-mono text-red-600 mb-1">// ERROR</div>
+                  <div className="text-xs font-mono text-red-600 mb-1">{'// ERROR'}</div>
                   <p className="text-sm text-red-800">{error}</p>
                 </div>
               </div>
@@ -257,7 +257,7 @@ export default function KYCVerificationPage() {
               <div className="flex items-start gap-3">
                 <Clock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-xs font-mono text-amber-700 mb-1">// IN PROGRESS</div>
+                  <div className="text-xs font-mono text-amber-700 mb-1">{'// IN PROGRESS'}</div>
                   <div className="text-sm font-semibold text-amber-900 mb-1">Verification In Progress</div>
                   <p className="text-xs text-amber-800 leading-relaxed">
                     Your documents are being reviewed by Sumsub. This typically takes 1–2 minutes.
@@ -268,7 +268,7 @@ export default function KYCVerificationPage() {
             </div>
 
             <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-              <div className="text-xs font-mono text-gray-500 mb-3">// LIVE SESSION</div>
+              <div className="text-xs font-mono text-gray-500 mb-3">{'// LIVE SESSION'}</div>
               <div className="flex items-center justify-center py-8 border border-dashed border-gray-200 rounded text-xs text-gray-500">
                 Verification sandbox active
               </div>
@@ -293,7 +293,7 @@ export default function KYCVerificationPage() {
                   <CheckCircle2 className="w-5 h-5 text-green-700" />
                 </div>
                 <div>
-                  <div className="text-xs font-mono text-green-700 mb-1">// VERIFIED</div>
+                  <div className="text-xs font-mono text-green-700 mb-1">{'// VERIFIED'}</div>
                   <div className="text-sm font-semibold text-green-900 mb-1">Identity Verified</div>
                   <p className="text-xs text-green-800 leading-relaxed">
                     Your identity and address have been successfully verified.
@@ -304,7 +304,7 @@ export default function KYCVerificationPage() {
             </div>
 
             <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-              <div className="text-xs font-mono text-gray-500 mb-3">// SUMMARY</div>
+              <div className="text-xs font-mono text-gray-500 mb-3">{'// SUMMARY'}</div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-xs text-gray-500 mb-1">ID Document</div>
@@ -326,7 +326,7 @@ export default function KYCVerificationPage() {
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-xs font-mono text-red-700 mb-1">// DECLINED</div>
+                  <div className="text-xs font-mono text-red-700 mb-1">{'// DECLINED'}</div>
                   <div className="text-sm font-semibold text-red-900 mb-1">Verification Failed</div>
                   <p className="text-xs text-red-800 leading-relaxed mb-3">
                     We couldn&apos;t verify your documents. Please review the issue below and try again.
@@ -341,7 +341,7 @@ export default function KYCVerificationPage() {
             </div>
 
             <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-              <div className="text-xs font-mono text-gray-500 mb-2">// TIPS TO SUCCEED</div>
+              <div className="text-xs font-mono text-gray-500 mb-2">{'// TIPS TO SUCCEED'}</div>
               <ul className="text-xs text-gray-700 space-y-2">
                 <li>• Ensure ID is valid, not expired, and corners are visible.</li>
                 <li>• Address proof must be issued within the last 3 months.</li>
@@ -354,7 +354,7 @@ export default function KYCVerificationPage() {
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
                 <XCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-xs font-mono text-red-600 mb-1">// ERROR</div>
+                  <div className="text-xs font-mono text-red-600 mb-1">{'// ERROR'}</div>
                   <p className="text-sm text-red-800">{error}</p>
                 </div>
               </div>

@@ -25,7 +25,8 @@ router.get('/me', authController.getMe);
 router.patch('/change-password', authController.changePassword);
 router.post('/wallet', ...validateLinkWallet, authController.linkWallet);
 router.post('/discord/unlink', authController.unlinkDiscord);
-router.patch('/role', authController.updateRole);
+// SECURITY: PATCH /role removed — self-service role escalation (any user → maintainer)
+// was a privilege-escalation vector. A role change must be an explicit admin-only flow.
 router.patch('/profile', authController.updateProfile);
 
 module.exports = router;

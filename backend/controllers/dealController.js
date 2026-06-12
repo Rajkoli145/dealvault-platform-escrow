@@ -9,11 +9,16 @@ const buildFilter = (query, userId, role) => {
 
   if (role === 'buyer') filter.buyerId = userId;
   else if (role === 'seller') filter.sellerId = userId;
-  else {
-    // admin sees all; optionally filter by participant
+  else if (role === 'admin') {
+    // Admin sees all; optionally filter by participant
     if (query.userId) {
       filter.$or = [{ buyerId: query.userId }, { sellerId: query.userId }];
     }
+  } else {
+    // SECURITY: Only buyer/seller/admin may list deals. Any other role (contributor,
+    // maintainer, escrow_agent, …) must NOT fall through to admin-level access —
+    // the old `else` branch leaked every deal on the platform to these roles.
+    throw new AppError('You are not authorized to list deals.', 403);
   }
 
   if (query.status) filter.status = query.status;

@@ -13,6 +13,32 @@ const { issueAddedMessage } = require('../services/botMessages');
 
 const TRIGGER_LABEL = 'dealvault';
 
+// SECURITY: GitHub redelivers webhooks on timeout/retry — without dedup a
+// replayed delivery re-runs side effects (issue creation, bot comments).
+// Short-TTL in-memory cache of processed X-GitHub-Delivery IDs.
+// NOTE: per-process only; a multi-instance deployment needs a shared store.
+const DELIVERY_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const processedDeliveries = new Map(); // deliveryId -> expiry timestamp
+
+function isDuplicateDelivery(deliveryId) {
+  if (!deliveryId) return false; // no header — cannot dedupe, process normally
+
+  const now = Date.now();
+
+  // Evict expired entries so the map cannot grow unboundedly
+  for (const [id, expiresAt] of processedDeliveries) {
+    if (expiresAt <= now) processedDeliveries.delete(id);
+  }
+
+  if (processedDeliveries.has(deliveryId)) return true;
+
+  processedDeliveries.set(deliveryId, now + DELIVERY_TTL_MS);
+  return false;
+}
+
+// Exported for tests
+exports._clearProcessedDeliveries = () => processedDeliveries.clear();
+
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
 /**
@@ -36,7 +62,17 @@ exports.handleGitHubWebhook = async (req, res, next) => {
       });
     }
 
-    // ── 2. Parse the payload ────────────────────────────────────────────────
+    // ── 2. Deduplicate deliveries ───────────────────────────────────────────
+    // SECURITY: checked AFTER signature verification so unauthenticated
+    // requests cannot poison the dedup cache. Duplicates get 200 so GitHub
+    // stops retrying.
+    const deliveryId = req.headers['x-github-delivery'];
+    if (isDuplicateDelivery(deliveryId)) {
+      console.log(`ℹ️  Duplicate webhook delivery ${deliveryId} ignored.`);
+      return res.status(200).json({ success: true, message: 'Duplicate delivery ignored.' });
+    }
+
+    // ── 3. Parse the payload ────────────────────────────────────────────────
     let payload;
     try {
       payload = JSON.parse(rawBody.toString('utf-8'));
@@ -52,7 +88,7 @@ exports.handleGitHubWebhook = async (req, res, next) => {
 
     console.log(`📩 Webhook received: event=${event}, action=${action}`);
 
-    // ── 3. Route to the appropriate handler ─────────────────────────────────
+    // ── 4. Route to the appropriate handler ─────────────────────────────────
 
     // Handle issue labeled event
     if (event === 'issues' && action === 'labeled') {

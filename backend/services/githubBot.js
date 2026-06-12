@@ -148,10 +148,9 @@ async function getIssueDetails(repoFullName, issueNumber) {
 function verifyWebhookSignature(payload, signature) {
   const secret = process.env.GITHUB_WEBHOOK_SECRET;
 
-  if (!secret) {
-    console.warn('⚠️  GITHUB_WEBHOOK_SECRET not set — skipping signature verification');
-    return true;
-  }
+  // SECURITY: Fail closed. A missing secret must NEVER accept an unsigned/forged
+  // webhook — previously this returned true (fail-open), letting anyone inject events.
+  if (!secret) return false;
 
   if (!signature) return false;
 
@@ -176,6 +175,17 @@ function resetOctokit() {
   installationOctokit = null;
 }
 
+/**
+ * SECURITY: Refuse to boot without a webhook secret. Called at startup so a
+ * misconfigured deploy fails fast instead of silently accepting forged webhooks.
+ */
+function assertWebhookSecretConfigured() {
+  if (!process.env.GITHUB_WEBHOOK_SECRET) {
+    console.error('FATAL: GITHUB_WEBHOOK_SECRET is not set. Refusing to start.');
+    process.exit(1);
+  }
+}
+
 // ── Exports ───────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -184,5 +194,6 @@ module.exports = {
   assignIssue,
   getIssueDetails,
   verifyWebhookSignature,
+  assertWebhookSecretConfigured,
   resetOctokit,
 };
