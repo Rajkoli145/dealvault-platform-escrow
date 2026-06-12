@@ -113,6 +113,8 @@ const apiLimiter = rateLimit({
 
 // Raw body for GitHub webhook signature verification (must be before json parser)
 app.use('/api/webhooks/github', express.raw({ type: 'application/json' }));
+// Raw body for Sumsub KYC webhook signature verification
+app.use('/api/kyc/webhook', express.raw({ type: 'application/json' }));
 
 app.use(express.json({ limit: '10kb' }));         // Limit payload size
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
@@ -152,6 +154,7 @@ if (process.env.NODE_ENV !== 'test') {
 // Mount routers
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/deals', require('./routes/deals'));
+app.use('/api/kyc', require('./routes/kyc'));
 
 // DealVault Bot routes
 app.use('/api/webhooks', require('./routes/webhooks'));

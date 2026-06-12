@@ -10,7 +10,7 @@ import {
   Wallet, Calendar, Mail, Github, ExternalLink,
   CheckCircle2, XCircle, Loader2, Copy, User as UserIcon, Eye, Users,
   ChevronDown, Bell, Check, AlertCircle, Info, Plus, X, Star, DollarSign,
-  Clock, TrendingUp, Award, MapPin, Link2, Briefcase, Tag
+  Clock, TrendingUp, Award, MapPin, Link2, Briefcase, Tag, AlertTriangle
 } from 'lucide-react';
 import Image from 'next/image';
 import { readDemoWallet, writeDemoWallet } from '../../lib/demoFlow';
@@ -24,8 +24,6 @@ export default function ProfilePage() {
   const [isConnectingWallet, setIsConnectingWallet] = useState(false);
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletError, setWalletError] = useState('');
-  const [kycVerified, setKycVerified] = useState(false);
-  const [kycStatus, setKycStatus] = useState<'not_started' | 'pending' | 'verified' | 'rejected'>('not_started');
   const [copySuccess, setCopySuccess] = useState(false);
   const [reputationOpen, setReputationOpen] = useState(false);
   const [skills, setSkills] = useState([]);
@@ -136,10 +134,7 @@ export default function ProfilePage() {
   };
 
   const handleStartKYC = () => {
-    // KYC flow - only to be updated when backend confirms verification
-    setKycStatus('pending');
-    // In real flow, this would call backend API
-    // setKycVerified would only be true after backend verification
+    router.push('/kyc');
   };
 
   const handleAddSkill = () => {
@@ -174,8 +169,8 @@ export default function ProfilePage() {
 
   const avatarSrc = user.githubAvatar || user.avatar;
   const initial = user.name?.[0]?.toUpperCase() || 'U';
-
-  // Calculate profile completion
+  const kycVerified = user.kyc?.status === 'approved';
+  const kycStatus = user.kyc?.status || 'not_submitted';
   const completedSteps = (kycVerified ? 1 : 0) + (walletConnected ? 1 : 0);
   const completionPercentage = (completedSteps / 3) * 100;
 
@@ -269,7 +264,7 @@ export default function ProfilePage() {
             { label: 'DEALS COMPLETED', value: '0' },
             { label: 'USDC EARNED', value: '0' },
             { label: 'REPUTATION', value: '-' },
-            { label: 'KYC STATUS', value: 'Pending' }
+            { label: 'KYC STATUS', value: kycStatus === 'approved' ? 'Approved' : kycStatus === 'pending' ? 'Pending' : 'Pending' }
           ].map((stat, idx) => (
             <div key={idx} className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
               <div className="text-xs text-gray-500 font-semibold uppercase tracking-widest mb-4">{`// ${stat.label}`}</div>
@@ -277,6 +272,44 @@ export default function ProfilePage() {
             </div>
           ))}
         </div>
+
+        {/* KYC Status Banner */}
+        {kycStatus === 'approved' && (
+          <div className="bg-green-50 border border-green-200 rounded-lg shadow-sm p-4 flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-green-700 flex-shrink-0" />
+            <div>
+              <div className="text-xs font-mono text-green-700 mb-1">// VERIFIED</div>
+              <div className="text-sm font-semibold text-green-900">Identity Verified</div>
+              <div className="text-xs text-green-800">
+                Your identity and address have been successfully verified
+                {user.kyc?.verifiedAt && ` on ${new Date(user.kyc.verifiedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.`}
+              </div>
+            </div>
+          </div>
+        )}
+        {kycStatus === 'pending' && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg shadow-sm p-4 flex items-center gap-3">
+            <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <div>
+              <div className="text-xs font-mono text-amber-700 mb-1">// IN PROGRESS</div>
+              <div className="text-sm font-semibold text-amber-900">Verification In Progress</div>
+              <div className="text-xs text-amber-800">Your documents are being reviewed</div>
+            </div>
+          </div>
+        )}
+        {kycStatus === 'rejected' && (
+          <div className="bg-red-50 border border-red-200 rounded-lg shadow-sm p-4 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <div>
+              <div className="text-xs font-mono text-red-700 mb-1">// FAILED</div>
+              <div className="text-sm font-semibold text-red-900">Verification Failed</div>
+              {user.kyc?.reviewNote && (
+                <div className="text-xs text-red-800 mt-1">{user.kyc.reviewNote}</div>
+              )}
+              <button onClick={handleStartKYC} className="mt-2 text-xs font-semibold text-red-900 underline">Retry Verification</button>
+            </div>
+          </div>
+        )}
 
         {/* Complete Profile & Payment Methods Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

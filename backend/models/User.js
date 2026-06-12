@@ -31,6 +31,7 @@ const kycSchema = new mongoose.Schema(
     reviewedAt:   { type: Date },
     verifiedAt:   { type: Date },                    // checklist field
     reviewNote:   { type: String, trim: true },
+    sumsubApplicantId: { type: String, trim: true, default: null },
   },
   { _id: false }
 );
